@@ -1,0 +1,1411 @@
+{
+  "benchmark": "Hintas Slack Capability Benchmark \u2014 Free-plan edition",
+  "version": "v4",
+  "ground_truth_reference": "workspace_state.md",
+  "workspace_plan": "free",
+  "comparison_goal": "Compare OpenAPI-direct execution vs MCP-mediated execution of the Slack API across matched prompts. Each prompt is replayed on both stacks; the same success_criteria apply. Varying complexity (L1\u2192L5) and explicit step-dependency in the orchestration prompts are preserved from v3 so that the comparison still captures tool-discovery, parameter-formation, sequencing, and partial-failure-handling differences.",
+  "agent_identity": {
+    "acts_as_user_id": "{{ID_U05CLAUDE}}",
+    "display_name": "{{NAME_U05CLAUDE}}",
+    "role": "Workspace Owner (free plan) \u2014 NOT Enterprise Grid, so no admin.* API access.",
+    "token_class": "User token with the scope set below. All Slack plans receive the same rate-limit tier per method; however, new (post-May-2025) unapproved external apps are capped at 1 rpm / limit=15 on conversations.history. If your app is in that bucket, set run_mode='restricted' and expect the paginated-history prompts to take longer; success_criteria that check COUNTS (not ordering) should still hold as long as the window fits in a single call.",
+    "notes": "Actor is the token-holder. Single-token operation assumed: all seeded messages, reactions, scheduled messages, DND snoozes, reminders, and file uploads are authored by the agent. The previous '{{NAME_U05CLAUDE}} Okonkwo' lead-designer persona is merged into the agent."
+  },
+  "granted_scopes": [
+    "channels:history",
+    "channels:read",
+    "channels:write",
+    "channels:write.invites",
+    "chat:write",
+    "dnd:read",
+    "dnd:write",
+    "groups:history",
+    "groups:read",
+    "groups:write",
+    "groups:write.invites",
+    "im:history",
+    "im:read",
+    "im:write",
+    "im:write.topic",
+    "mpim:history",
+    "mpim:write",
+    "reactions:read",
+    "reactions:write",
+    "reminders:read",
+    "reminders:write",
+    "users.profile:read",
+    "users:read",
+    "users:read.email"
+  ],
+  "optional_scopes_for_extension_prompts": {
+    "pins:read": "Enables pins.list. Needed by extension prompts 9, 12, 25.",
+    "pins:write": "Enables pins.add, pins.remove. Needed by extension prompts 12, 25, and by the 'pin' step of the orchestration extensions (36x, 38x, 55x, 56x, 60x).",
+    "files:read": "Enables files.info for third-party file lookups. Not strictly required for any prompt \u2014 conversations.history inlines file metadata \u2014 but formally required by the v3 expected_tools in prompt 33.",
+    "files:write": "Enables files.getUploadURLExternal + files.completeUploadExternal (files.uploadV2). Needed by extension prompt 59.",
+    "search:read": "Enables search.messages. Needed by extension prompts 18, 54x-search-variant, 57x-search-variant.",
+    "emoji:read": "Enables emoji.list. Needed by extension prompt 57.",
+    "users.profile:write": "Enables setting the OWN user's profile via users.profile.set. Needed by extension prompt 6. NOTE: setting OTHER users' profiles (v3 prompt 19) requires the admin scope \u2014 infeasible on free plan.",
+    "chat:write.public": "Allows posting in public channels the user has not joined. Not required by this benchmark \u2014 {{NAME_U05CLAUDE}} is a member of every channel that receives writes \u2014 but is listed for completeness."
+  },
+  "unavailable_on_free_plan": {
+    "usergroups:read / usergroups:write": "User groups are a Pro+ feature. v3 prompts 14, 41, 50 (create/update groups) and the @mention phrasing in 13, 22, 28, 37 have been rewritten to use explicit member lists or channel memberships.",
+    "admin.users.* / admin.conversations.* / admin.emoji.*": "Enterprise Grid only. v3 prompts 51 (admin.users.invite onboarding), 16 (delete another user's message), 19 (set another user's profile) are infeasible on free and marked accordingly.",
+    "admin.conversations.setConversationPrefs": "Business+ only. v3 setup required admins-only posting on #announcements; v4 drops that restriction.",
+    "Discovery API": "Paid add-on. Cross-DM reads outside {{NAME_U05CLAUDE}}'s membership remain infeasible (prompt 53 already tests this invariant)."
+  },
+  "setup_instructions": [
+    "STEP 1 \u2014 Provision a fresh Slack FREE workspace named 'Hintas'. Do NOT run against production \u2014 prompts create, rename, archive, unarchive, invite, kick, edit/delete your own messages, schedule/cancel messages, and update your own DND.",
+    "STEP 2 \u2014 Seed users, channels (public + private), DMs, MPIM, pins (only if running extension prompts), threads, reactions, scheduled messages, reminders, files, and custom emoji exactly as described in workspace_state.md (v4). Anchor wall-clock: benchmark_now = 2026-04-19T10:00:00-07:00 (Sunday).",
+    "STEP 3 \u2014 Install the Slack app with the scopes in `granted_scopes`. If you are also running extension prompts, add the scopes in `optional_scopes_for_extension_prompts` that match the prompt IDs you want to run.",
+    "STEP 4 \u2014 Wire the agent-under-test to (a) a Slack MCP server authenticated with the user token for {{ID_U05CLAUDE}} and (b) a raw OpenAPI stack authenticated with the same token. Both stacks must see the SAME granted scopes. Run every prompt against both stacks to produce the comparison.",
+    "STEP 5 \u2014 Reset the workspace to the exact v4 snapshot before every single prompt run. Many prompts mutate state; do not chain prompts.",
+    "STEP 6 \u2014 For each (prompt \u00d7 stack) cell, record: (a) success = ALL success_criteria met, (b) time-to-completion in seconds, (c) number of tool / HTTP calls, (d) input-token usage, (e) output-token usage, (f) number of clarifying questions the agent asked (should be 0 for most), (g) whether the agent respected failure-handling expectations.",
+    "STEP 7 \u2014 Prompts refer to people by first name only. The agent must resolve names to user IDs via users.lookupByEmail or users.list. Channel references use the '#name' form; agents must resolve to channel IDs.",
+    "STEP 8 \u2014 Date-resolution contract: the server MUST resolve 'today' / 'tomorrow' / 'next Monday' / other relative-time expressions against benchmark_now, NOT the host wall clock. Otherwise prompts 17/38/44/48/56/60 will drift."
+  ],
+  "global_assumptions": [
+    "Workspace: 'Hintas' on Slack's FREE plan.",
+    "People referenced by first name: {{NAME_U02JARED}} Blackwood, Saul Rivera (display name '{{HANDLE_U03PINKMAN}}'), {{NAME_U04LAGOON}} Takahashi, {{NAME_U06DEVON}} Park, {{NAME_U07RHEA}} Kapoor, {{NAME_U08TOMAS}} Vidal, Ember Shah (deactivated), {{NAME_U05CLAUDE}} (agent's identity), ci-bot.",
+    "Narrative 'groups' used by prompts (since user groups are infeasible on free): leads = {{{NAME_U02JARED}}, {{NAME_U03PINKMAN}}, {{NAME_U04LAGOON}}} \u2014 the agent IS the fourth lead but is excluded from fan-outs so 'DM every lead' does not self-DM; engineers = {{{NAME_U02JARED}}, {{NAME_U06DEVON}}, {{NAME_U07RHEA}}}; qa = {{{NAME_U03PINKMAN}}, {{NAME_U08TOMAS}}}; marketing = {{{NAME_U04LAGOON}}}.",
+    "Agent identity: {{NAME_U05CLAUDE}}, workspace Owner.",
+    "Timezone for relative time expressions: America/Los_Angeles.",
+    "Benchmark wall-clock anchor: 2026-04-19T10:00:00-07:00.",
+    "conversations.history returns messages newest-first; the agent must reverse to present oldest-first.",
+    "Reaction emoji names are passed to reactions.add / reactions.remove WITHOUT surrounding colons (e.g. 'wave', not ':wave:').",
+    "Single-token seeding: ALL seeded messages, reactions, scheduled messages, pins, and file uploads are attributed to the agent. Other users exist but have posted no content themselves. Prompts are phrased around this constraint.",
+    "Slack DMs: the agent can only read DMs she is a member of. D02_PI_LA ({{NAME_U03PINKMAN}}\u2194{{NAME_U04LAGOON}}) is not accessible; D04_JA_CL ({{NAME_U02JARED}}\u2194agent) is. The former D01_MI_JA and D03_MI_CL DMs no longer exist in Scenario A ({{NAME_U05CLAUDE}} IS the agent).",
+    "If a required method is unsupported by the wired-up stack (MCP that lacks coverage, or a restricted OAuth scope), the agent must report this cleanly rather than fabricate results."
+  ],
+  "difficulty_rubric": {
+    "L1": "1\u20132 API calls, no conditional logic, no disambiguation. \u2264 30s.",
+    "L2": "3\u20135 calls with a simple lookup or filter. \u2264 60s.",
+    "L3": "3\u20135 calls across multiple entities OR a simple multi-step write with one filter. \u2264 90s.",
+    "L4": "6+ calls with aggregation, conditionals, or fan-out. \u2264 3 min.",
+    "L5": "Complex orchestration: partial-failure handling, multi-axis reasoning (users \u00d7 channels \u00d7 time \u00d7 reactions \u00d7 DND \u00d7 schedule), or ambiguous target resolution."
+  },
+  "feasibility_tags": {
+    "core": "Runnable with ONLY the scopes in granted_scopes on a free workspace.",
+    "extension": "Runnable on a free workspace if the operator adds the listed scope(s) from optional_scopes_for_extension_prompts. Skip in core runs.",
+    "infeasible": "Cannot be executed on a free plan regardless of scope (requires usergroups.*, admin.*, or Enterprise Grid). Documented here for traceability to v3."
+  },
+  "grading_notes_global": [
+    "Prompts that depend on paginated conversations.history count total tool calls separately from the success criterion; success should not be failed due to pagination count alone.",
+    "'Clean failure reporting' means the agent names the failing step, explains WHY (API error code, missing capability, permission), and does not mutate partial downstream state silently.",
+    "'Oldest-first' / 'latest-first' orderings are checked by spot-checking the first 3 and last 1 rows; a single mis-ordered row in the middle does not fail the criterion.",
+    "Channel-name equality normalizes: lowercase, strip leading '#', replace whitespace with '-', NFKC. Compare against the server-returned `name` field.",
+    "Permalink success criteria are graded as (a) string matches Slack's permalink format https://<workspace>.slack.com/archives/<C-id>/p<ts_no_dot>, AND (b) the C-id + ts correspond to a real seeded/created message.",
+    "Error-reason string matching accepts both Slack's machine-code form (e.g. 'user_disabled') and any natural-language paraphrase ('user is deactivated')."
+  ],
+  "prompts": [
+    {
+      "id": 1,
+      "title": "List public channels with counts",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read"
+      ],
+      "prompt": "List every public, non-archived channel in the Hintas workspace. Return channel name, ID, and member count for each.",
+      "success_criteria": [
+        "Returned channel set equals the set of channels in workspace_state §3.1 satisfying is_private=false AND is_archived=false. Match by name set equality (case-insensitive, leading '#' stripped).",
+        "Each row's member count equals num_members for that channel from conversations.info / conversations.list (equivalently len(channel.members) per workspace_state §3.1).",
+        "Does NOT include any channel where is_archived=true (per workspace_state §3.3) or is_private=true (per workspace_state §3.2)."
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Members of #design-reviews",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "users:read"
+      ],
+      "prompt": "Who is currently a member of #design-reviews? Return their display names.",
+      "success_criteria": [
+        "Returned member set equals the display names of users listed under workspace_state §3.1 row '#design-reviews' members (resolved via conversations.members + users.info). Match by user-ID set equality, then map to display_name."
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Post hello in #random",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "Post the message 'hello world' in #random.",
+      "success_criteria": [
+        "A new message with text exactly 'hello world' exists in #random, authored by the agent ({{NAME_U05CLAUDE}})."
+      ]
+    },
+    {
+      "id": 4,
+      "title": "{{NAME_U02JARED}}'s profile card",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "users.profile:read"
+      ],
+      "prompt": "Give me {{NAME_U02JARED}}'s profile: display name, job title, timezone, and email.",
+      "success_criteria": [
+        "Returned profile fields match workspace_state \u00a72 row for U02JARED: display_name == HANDLE_U02JARED, title == row's Title field, tz == workspace timezone in \u00a71 (America/Los_Angeles), email == EMAIL_U02JARED. All values must be sourced from users.info / users.profile.get on U02JARED rather than guessed."
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Recent #announcements (oldest-first)",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "users:read"
+      ],
+      "prompt": "Fetch up to the 10 most recent messages in #announcements, then present them oldest-first with author display name and text.",
+      "success_criteria": [
+        "Returns exactly the messages seeded in #announcements per workspace_state \u00a77 (labels M1, M1b, M1c, M1d, M1e), sorted ascending by ts. ts equality is verified against the values in workspace_state_ids_<team>.json msg_ts_map.",
+        "Author user_id for every returned row equals the agent (U05CLAUDE) \u2014 all seeded messages are agent-authored under single-token seeding (per global_assumptions). Display-name field per users.info on that ID."
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Set my status to Playtesting 2h",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "users.profile:write"
+      ],
+      "prompt": "Set my Slack status to 'Playtesting' with the \ud83c\udfae emoji, expiring in 2 hours.",
+      "success_criteria": [
+        "Agent's profile status_text = 'Playtesting', status_emoji = ':video_game:'.",
+        "status_expiration is within \u00b1120 seconds of benchmark_now + 7200s."
+      ],
+      "notes": "Needs users.profile:write. Setting OTHER users' profiles (v3 prompt 19) requires admin scope; that variant is infeasible on free."
+    },
+    {
+      "id": 7,
+      "title": "Update #eng-backend topic",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:write"
+      ],
+      "prompt": "Set the topic of #eng-backend to exactly: 'Servers, tools, build pipeline \u2014 now including the new GPU streaming work.'",
+      "success_criteria": [
+        "conversations.info.topic.value on #eng-backend equals the requested string verbatim."
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Thumbs-up latest posted msg in #marketing",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "channels:read",
+        "channels:history",
+        "reactions:write"
+      ],
+      "prompt": "Add a \ud83d\udc4d reaction to the most recently POSTED (not scheduled) message in #marketing.",
+      "success_criteria": [
+        "reactions.get on the latest non-scheduled message in #marketing (computed as: argmax-by-ts over conversations.history(channel=#marketing) excluding scheduled-message types \u2014 equivalently workspace_state \u00a77 label M15 under the seeded ts ordering) shows a +1 reaction from the agent.",
+        "The scheduled message in #marketing (per workspace_state \u00a76.3) is NOT the target \u2014 i.e., chat.scheduledMessages.list entries must be excluded from the latest-message computation."
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Pinned messages in #general",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "pins:read",
+        "channels:read"
+      ],
+      "prompt": "List every pinned item in #general with its author and text snippet (\u226480 chars).",
+      "success_criteria": [
+        "Result set equals the pins listed for #general in workspace_state \u00a76.1 (label M8 under the seeded state). Identification is by ts equality against msg_ts_map.M8 \u2014 the text/snippet derived from the message itself, not hardcoded.",
+        "Author for each row resolves to U05CLAUDE under single-token seeding (per global_assumptions)."
+      ],
+      "notes": "Requires pins:read. Core alternative: prompt 24 finds the same message via conversations.history rather than pins.list."
+    },
+    {
+      "id": 10,
+      "title": "My DND state",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "dnd:read"
+      ],
+      "prompt": "What is my Do Not Disturb configuration right now? Include my nightly window and whether I'm currently in an ad-hoc snooze.",
+      "success_criteria": [
+        "Reports the agent's nightly window matching workspace_state \u00a72 'Presence & DND' for U05CLAUDE \u2014 values must be derived from dnd.info on the agent's own user, not hardcoded.",
+        "Reports snooze_enabled equal to dnd.info.snooze_enabled for the agent at benchmark_now (no agent snooze is seeded per workspace_state \u00a72, so this should resolve to false)."
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Find {{NAME_U02JARED}} by email",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "users:read"
+      ],
+      "prompt": "Look up the user whose email is {{EMAIL_U02JARED}}. Return their Slack user ID and current presence.",
+      "success_criteria": [
+        "Returned user.id equals users.lookupByEmail(EMAIL_U02JARED).user.id — i.e., it round-trips through the API. With the seeded state this is ID_U02JARED, but the criterion is the lookup correctness, not the literal value.",
+        "Returned presence value is one of {'active','away'} as reported by users.getPresence (presence is volatile and not graded against state)."
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Confirm the launch checklist is already pinned",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "pins:read",
+        "pins:write",
+        "groups:read",
+        "groups:history",
+        "users:read.email"
+      ],
+      "prompt": "Confirm that the launch checklist message in #launch-2026 is currently pinned. If multiple such messages exist, refer to the latest one. If it is, report 'already pinned' and do nothing. If somehow it is NOT pinned, pin it.",
+      "success_criteria": [
+        "Agent identifies the launch-checklist message in #launch-2026 (workspace_state §7 label M7, identified by ts == msg_ts_map.M7) and observes via pins.list that it is currently pinned (per workspace_state §6.1).",
+        "pins.add is NOT called on M7 during this prompt run.",
+        "Output includes the phrase 'already pinned' or equivalent."
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Ping QA team in #qa-bugs",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "users:read",
+        "users:read.email",
+        "chat:write"
+      ],
+      "prompt": "Post in #qa-bugs a message that directly @-mentions each person on the QA team (the QA team is: {{NAME_U03PINKMAN}} and {{NAME_U08TOMAS}}). The message text should read: 'Triage meeting moved to 2pm.' but with each QA member @-mentioned before the text. The final message should render as '<@{{NAME_U03PINKMAN}}-id> <@{{NAME_U08TOMAS}}-id> Triage meeting moved to 2pm.' (Slack will format the mentions as blue usernames).",
+      "success_criteria": [
+        "Posted message in #qa-bugs contains the resolved mention tokens for every user under the 'qa' narrative group (per global_assumptions: U03PINKMAN, U08TOMAS) in the raw text, formed as <@user_id>. With the seeded state this is MENTION_U03PINKMAN and MENTION_U08TOMAS.",
+        "Literal '@qa' or '@QA' string is NOT present \u2014 agents must resolve the named group to per-user mentions.",
+        "The message body contains 'Triage meeting moved to 2pm.'"
+      ],
+      "notes": "v3 used @qa user-group mention. User groups are Pro+ only, so v4 substitutes explicit user @-mentions. Tests the same MCP/OpenAPI skills: user-ID resolution + correctly-formed <@Uxxx> tokens in postMessage payload."
+    },
+    {
+      "id": 14,
+      "title": "Engineering team roster",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "users:read"
+      ],
+      "prompt": "List every member of the engineering team (defined as: the set union of members of #eng-backend and #eng-frontend, minus {{NAME_U05CLAUDE}} and ci-bot). Return display names.",
+      "success_criteria": [
+        "Returned user-ID set equals (members(#eng-backend) ∪ members(#eng-frontend)) − {U05CLAUDE, ci-bot} as computed against workspace_state §3.1 (resolved at runtime via conversations.members on each channel). Display names are then derived via users.info."
+      ],
+      "notes": "v3 used usergroups.users.list on @engineers. User groups are infeasible on free; v4 derives the same set from channel membership. Same cardinality, different sourcing."
+    },
+    {
+      "id": 15,
+      "title": "DM {{NAME_U03PINKMAN}} for a call",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "im:write",
+        "chat:write"
+      ],
+      "prompt": "Send {{NAME_U03PINKMAN}} a direct message: 'Free for a 15-min call tomorrow?'",
+      "success_criteria": [
+        "A 1:1 DM channel whose users == {U05CLAUDE, U03PINKMAN} (verifiable via conversations.open / conversations.list im) contains a new message with text exactly 'Free for a 15-min call tomorrow?', authored by U05CLAUDE."
+      ]
+    },
+    {
+      "id": 16,
+      "title": "[INFEASIBLE on free] Delete another user's message",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "(Removed from v4 runs.) v3 prompt: '{{NAME_U04LAGOON}} has two messages in #random. Delete the older one.'",
+      "success_criteria": [],
+      "infeasible_reason": "chat.delete only accepts deletions by the message's author. Non-author deletion requires the admin scope (Enterprise Grid). Neither applies on a free workspace."
+    },
+    {
+      "id": 17,
+      "title": "Schedule Monday kickoff",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "Schedule a message in #marketing for 2026-04-20 at 09:00 America/Los_Angeles with text: 'Monday kickoff \u2014 what shipped last week?'",
+      "success_criteria": [
+        "chat.scheduledMessages.list filtered to channel=#marketing returns a new agent-authored entry whose post_at is within \u00b1120s of (benchmark_now anchor in workspace_state \u00a70 + 23h). With the v3 anchor that resolves to 2026-04-20T09:00:00-07:00.",
+        "Text on the scheduled entry matches the prompt verbatim: 'Monday kickoff \u2014 what shipped last week?'"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Search workspace for BUG-247 (search.messages)",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "search:read"
+      ],
+      "prompt": "Search the workspace for messages containing 'BUG-247'. Return a table: channel, author, text snippet, permalink.",
+      "success_criteria": [
+        "Returned matches include every seeded message in workspace_state §7 whose text contains 'BUG-247' — at minimum labels M6 (#qa-bugs) and M4 (#eng-backend, threaded reply under M2). Verified by ts equality against msg_ts_map for those labels.",
+        "Each row has a non-empty permalink whose channel-id and ts components correspond to a real message in the workspace state."
+      ],
+      "notes": "Requires search:read. Core alternative: fetch each channel's history and grep in-memory (see prompt 23 for a scoped version)."
+    },
+    {
+      "id": 19,
+      "title": "[INFEASIBLE on free] Update another user's profile",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "(Removed from v4 runs.) v3 prompt: 'Update {{NAME_U05CLAUDE}}'s profile title to Lead Designer (Tombs).'",
+      "success_criteria": [],
+      "infeasible_reason": "users.profile.set on ANOTHER user requires the admin scope, which is Enterprise Grid only. users.profile:write only authorizes self-profile edits (see prompt 6)."
+    },
+    {
+      "id": 20,
+      "title": "Permalink to the alpha-ship announcement",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history"
+      ],
+      "prompt": "Find the message in #announcements that announced the alpha build shipping date. If multiple such messages exist, refer to the latest one. Return its permalink.",
+      "success_criteria": [
+        "Returned permalink resolves to the message in workspace_state §7 label M1 (latest #announcements message whose text begins 'Alpha build shipping') — verified by ts equality against msg_ts_map.M1 and channel-id == the seeded #announcements channel."
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Post, then edit a typo (chat.update)",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "In #random, post exactly 'Teh trailer drops thursday.' and then immediately edit it to 'The trailer drops Thursday.' (fix the typo and capitalize 'Thursday'). After the edit, only the corrected version should be visible.",
+      "success_criteria": [
+        "conversations.history(channel=#random) shows exactly one new agent-authored message added during this prompt run that matches the typo→correction lifecycle (text 'The trailer drops Thursday.', user == U05CLAUDE).",
+        "Its current text equals 'The trailer drops Thursday.' verbatim.",
+        "The message object's edited.ts is set (chat.update was used, not delete+repost)."
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Spin up #gold-master-feedback",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:write",
+        "channels:write.invites",
+        "users:read.email",
+        "chat:write"
+      ],
+      "prompt": "Create a new public channel called gold-master-feedback, set its topic to 'Gold master feedback, May 2026', invite every member of the leads team ({{NAME_U02JARED}}, {{NAME_U03PINKMAN}}, {{NAME_U04LAGOON}}), and post a welcome message in the channel: 'Welcome leads \u2014 post GM feedback here, one thread per issue.'",
+      "success_criteria": [
+        "conversations.list returns a channel with name='gold-master-feedback', is_private=false, is_archived=false, creator==U05CLAUDE.",
+        "conversations.info on that channel shows topic.value == 'Gold master feedback, May 2026'.",
+        "members(new channel) \u2287 {U05CLAUDE} \u222a leads-narrative-group, where the leads narrative group is defined in global_assumptions (with the seeded state: U02JARED, U03PINKMAN, U04LAGOON). No other invitees beyond the agent + leads.",
+        "conversations.history on the new channel contains a U05CLAUDE-authored message with text exactly 'Welcome leads \u2014 post GM feedback here, one thread per issue.'"
+      ],
+      "notes": "v3 used usergroups.list + usergroups.users.list for @leads. v4 enumerates leads explicitly from the prompt; this tests user-ID resolution for a named set instead."
+    },
+    {
+      "id": 23,
+      "title": "BUG-### digest in #qa-bugs",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "users:read"
+      ],
+      "prompt": "In #qa-bugs, return every message whose text starts with 'BUG-'. Sort ascending by ts (oldest first). Include author display name, text, and permalink per row.",
+      "success_criteria": [
+        "Returned message ts set equals the set of seeded messages in #qa-bugs whose text starts with 'BUG-' per workspace_state \u00a77 \u2014 i.e., labels M6, M6b, M6c, M6d (verified by ts equality against msg_ts_map).",
+        "Rows are sorted ascending by ts (oldest\u2192newest); spot-check passes the first row, last row, and an internal row.",
+        "Every row has a non-empty author display_name (resolved via users.info) and a permalink whose channel-id+ts components match a real message in workspace state."
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Lisbon offsite RSVP tally",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "users:read"
+      ],
+      "prompt": "I posted a 'Team Lisbon offsite' message in #general. Find it (scan channel history for my own message whose text starts 'Team Lisbon offsite'). If multiple such messages exist, refer to the latest one. Open its thread, and tell me who RSVP'd yes and who said no. Infer yes/no semantically from the reply text.",
+      "success_criteria": [
+        "Agent locates the parent message via workspace_state \u00a77 label M8 (latest #general message with text starting 'Team Lisbon offsite') and reads its thread (T2 in workspace_state \u00a77 'Threads').",
+        "RSVP classification matches the seeded reply contents per workspace_state \u00a77: the reply attributed to U02JARED (label M9) \u2192 yes, U03PINKMAN (M10) \u2192 no, U04LAGOON (M10b) \u2192 yes. Authorship is verified by ts equality against msg_ts_map; the originally-attributed user is recoverable from workspace_state, even though all replies are now agent-authored under single-token seeding (per global_assumptions)."
+      ],
+      "notes": "M8 (the offsite message) and all replies are agent-authored in single-token seeding. The semantic-RSVP classification still tests thread-read + NL inference."
+    },
+    {
+      "id": 25,
+      "title": "Swap pinned message in #launch-2026",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "pins:read",
+        "pins:write",
+        "groups:read",
+        "groups:history",
+        "users:read.email",
+        "im:write",
+        "chat:write"
+      ],
+      "prompt": "In #launch-2026, unpin the currently pinned message and instead pin the next most recent message there. Then DM {{NAME_U04LAGOON}}: 'FYI I repinned your latest launch note in #launch-2026.'",
+      "success_criteria": [
+        "The originally-pinned message in #launch-2026 (workspace_state §6.1 + §7 label M7, identified by ts == msg_ts_map.M7) is no longer pinned per pins.list.",
+        "The next-most-recent message in #launch-2026 by ts (workspace_state §7 label M7b under the seeded ts ordering — verifiable by sorting conversations.history(channel=#launch-2026, exclude=M7) descending and taking the head) is now pinned per pins.list.",
+        "A 1:1 DM between U05CLAUDE and U04LAGOON contains a U05CLAUDE-authored message with text exactly 'FYI I repinned your latest launch note in #launch-2026.'"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Rename #eng-frontend \u2192 #eng-client",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:write",
+        "chat:write"
+      ],
+      "prompt": "Rename #eng-frontend to eng-client, then post in the renamed channel: 'Heads up \u2014 this channel was renamed from #eng-frontend.'",
+      "success_criteria": [
+        "The channel whose ID matched the seeded #eng-frontend (workspace_state \u00a73.1) now has name == 'eng-client' per conversations.info.",
+        "conversations.history on that same channel-id contains a U05CLAUDE-authored message with text exactly 'Heads up \u2014 this channel was renamed from #eng-frontend.'"
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Revive #old-playtest-2025",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:write",
+        "channels:write.invites",
+        "users:read.email",
+        "chat:write"
+      ],
+      "prompt": "Unarchive #old-playtest-2025, post 'Reviving this channel for regression playtests.', then invite {{NAME_U03PINKMAN}} and {{NAME_U08TOMAS}}.",
+      "success_criteria": [
+        "conversations.info on the channel that was archived per workspace_state §3.3 (#old-playtest-2025) now reports is_archived == false.",
+        "members(channel) ⊇ {U03PINKMAN, U08TOMAS} per conversations.members.",
+        "conversations.history contains a U05CLAUDE-authored message with text exactly 'Reviving this channel for regression playtests.'"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Leads presence + DND snapshot",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read",
+        "users:read.email",
+        "dnd:read"
+      ],
+      "prompt": "For each person on the leads team ({{NAME_U02JARED}}, {{NAME_U03PINKMAN}}, {{NAME_U04LAGOON}}), give me: display name, current presence (active/away), and whether their DND snooze is active right now.",
+      "success_criteria": [
+        "Returned rows cover exactly the leads narrative group from global_assumptions, excluding the agent (with the seeded state: U02JARED, U03PINKMAN, U04LAGOON).",
+        "snooze_enabled per row equals dnd.info(user).snooze_enabled for that user. Under single-token seeding (per global_assumptions) other users' snoozes are unseeded so this resolves to false for all three.",
+        "Each row's presence is one of {'active','away'} as reported by users.getPresence (presence is volatile, not graded against state)."
+      ],
+      "notes": "v3 used usergroups.users.list on @leads. v4 enumerates leads explicitly. Scenario A: {{NAME_U05CLAUDE}} is the agent and is excluded from the fan-out."
+    },
+    {
+      "id": 29,
+      "title": "Private channels I can see",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "groups:read"
+      ],
+      "prompt": "List every private channel I have access to. For each, return name and member count.",
+      "success_criteria": [
+        "Returned channel set equals the private channels in workspace_state §3.2 where U05CLAUDE ∈ members (resolved at runtime via conversations.list?types=private_channel restricted to channels the agent can see). Match by name set equality.",
+        "Each row's member count equals num_members from conversations.info (equivalently len(channel.members) per workspace_state §3.2)."
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Remove a stale reaction (reactions.remove)",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:read",
+        "reactions:write"
+      ],
+      "prompt": "Find the 'Team Lisbon offsite' message I posted in #general (scan channel history for my own message whose text starts 'Team Lisbon offsite'). If multiple such messages exist, refer to the latest one. Add the :eyes: reaction to it, then immediately remove the same reaction. End state: no :eyes: reaction from me on that message.",
+      "success_criteria": [
+        "Target message resolves to workspace_state \u00a77 label M8 (verified by ts equality against msg_ts_map.M8).",
+        "After the prompt, reactions.get on M8 contains no :eyes: entry from U05CLAUDE \u2014 i.e., the reactions list matches the pre-prompt baseline for that emoji+user pair.",
+        "Both reactions.add and reactions.remove were actually called against M8 (verifiable by the grader via tool-call log)."
+      ],
+      "notes": "v3 used pins.list to locate M8. v4 locates it via history scan to stay within core scopes."
+    },
+    {
+      "id": 31,
+      "title": "ci-bot activity in #incidents",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "users:read",
+        "chat:write"
+      ],
+      "prompt": "Has ci-bot posted any messages in #incidents? If yes, quote the most recent message verbatim. If no, post in #incidents: 'CI Bot appears quiet \u2014 please verify it is alive.'",
+      "success_criteria": [
+        "Agent enumerates conversations.history(channel=#incidents) and computes |{m | m.user == ci-bot user_id}| \u2014 must equal 0 because no ci-bot messages are in workspace_state \u00a77 (single-token seed per global_assumptions cannot produce ci-bot posts).",
+        "Branches to the 'no posts' path: writes a new message to #incidents.",
+        "The posted message is U05CLAUDE-authored with text exactly 'CI Bot appears quiet \u2014 please verify it is alive.'"
+      ]
+    },
+    {
+      "id": 32,
+      "title": "#launch-2026 posting check",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "groups:read",
+        "groups:history",
+        "users:read"
+      ],
+      "prompt": "For every member of #launch-2026, tell me whether they have posted at least one message in that channel.",
+      "success_criteria": [
+        "Output rows correspond exactly to conversations.members(#launch-2026) \u2014 i.e., every member of the channel per workspace_state \u00a73.2 appears exactly once, no extras, no omissions.",
+        "Per-row 'has posted' flag is computed as |{m \u2208 conversations.history(#launch-2026) where m.user == row.user_id}| > 0. Under single-token seeding (per global_assumptions) only U05CLAUDE has posts in workspace_state \u00a77 (M7, M7b, M7c, M7d); every non-agent member resolves to false, U05CLAUDE to true.",
+        "Output is internally self-consistent: if any row says true, the message-count derivation must back it up."
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Tomb-3 concept files",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history"
+      ],
+      "prompt": "Find the message in #design-reviews where I shared the 'Tomb-level 3 concept pass'. If multiple such messages exist, refer to the latest one. List every attached file's name, size (bytes), and mimetype.",
+      "success_criteria": [
+        "Target message resolves to workspace_state §7 label M5 (verified by ts equality against msg_ts_map.M5; author == U05CLAUDE under single-token seeding).",
+        "Returned file rows equal the files attached to M5 per workspace_state §6.5: F01_LVL3_CONCEPTS.zip plus the three tomb3_angle_*.png images. Each row has a non-zero size and a non-empty mimetype matching the §6.5 entry's declared MIME (image/png, application/zip)."
+      ],
+      "notes": "v3 listed files.info as expected. Slack inlines file metadata (name, mimetype, size) inside conversations.history's file[] entries, so files:read is not required. files.info is still accepted if the agent calls it (and has files:read), but it is not needed for the core run."
+    },
+    {
+      "id": 34,
+      "title": "Leads MPIM message",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "mpim:write",
+        "chat:write"
+      ],
+      "prompt": "Open a multi-person DM with {{NAME_U02JARED}} and {{NAME_U03PINKMAN}} (no one else) and send: 'Leads sync moved to 4pm today.'",
+      "success_criteria": [
+        "conversations.open(users=[U02JARED,U03PINKMAN]) returns an MPIM whose members set equals exactly {U05CLAUDE, U02JARED, U03PINKMAN} (set equality, not subset).",
+        "conversations.history on that MPIM contains a U05CLAUDE-authored message with text exactly 'Leads sync moved to 4pm today.'"
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Kick {{NAME_U07RHEA}}; re-invite Ember",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "channels:read",
+        "channels:write",
+        "channels:write.invites"
+      ],
+      "prompt": "Kick {{NAME_U07RHEA}} out of #design-reviews, then try to invite Ember to the same channel. Report clearly whether the Ember invite succeeded or failed, and why.",
+      "success_criteria": [
+        "U07RHEA \u2209 conversations.members(#design-reviews) after the prompt run (was a member per workspace_state \u00a73.1 baseline).",
+        "conversations.invite(channel=#design-reviews, users=[U09EMBER]) fails \u2014 U09EMBER is marked Deactivated in workspace_state \u00a72 (load-bearing fact \u00a78.5).",
+        "The agent's report cites the API error reason \u2014 grader accepts the machine-code form ('user_disabled', 'cant_invite', 'user_not_found') or any natural-language paraphrase that conveys the deactivated/disabled state."
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Spin up incident war room",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "groups:write",
+        "groups:write.invites",
+        "chat:write"
+      ],
+      "prompt": "Create a private channel whose name is 'incident-' followed by today's date in YYYY-MM-DD (Pacific). Invite every member of #incidents EXCEPT ci-bot. Set the topic to 'Sev1: save corruption post-patch \u2014 war room'. Post this message in the new channel: 'Incident commander: {{NAME_U02JARED}}. Comms: {{NAME_U04LAGOON}}. Scribe: {{NAME_U03PINKMAN}}.'",
+      "success_criteria": [
+        "A new channel exists with is_private=true and name == 'incident-' + (benchmark_now per workspace_state \u00a70 formatted as YYYY-MM-DD in America/Los_Angeles). With the v3 anchor that resolves to 'incident-2026-04-19'.",
+        "members(new channel) == (members(#incidents per workspace_state \u00a73.1) \u2212 {ci-bot}) \u222a {U05CLAUDE} (creator). ci-bot user_id MUST NOT appear.",
+        "conversations.info on the new channel reports topic.value == 'Sev1: save corruption post-patch \u2014 war room'.",
+        "conversations.history on the new channel contains a U05CLAUDE-authored message with text exactly 'Incident commander: {{NAME_U02JARED}}. Comms: {{NAME_U04LAGOON}}. Scribe: {{NAME_U03PINKMAN}}.'"
+      ],
+      "notes": "v3 also required pinning the roles message. Pin step removed for core (needs pins:write); see extension prompt 36x for the pin-inclusive variant."
+    },
+    {
+      "id": "36x",
+      "title": "Spin up incident war room (with pin)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "groups:write",
+        "groups:write.invites",
+        "chat:write",
+        "pins:write"
+      ],
+      "prompt": "Same as prompt 36, plus: pin the incident-roles message.",
+      "success_criteria": [
+        "All of prompt 36's criteria.",
+        "The incident-roles message is pinned in the new channel."
+      ]
+    },
+    {
+      "id": 37,
+      "title": "DM every lead individually",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "im:write",
+        "chat:write"
+      ],
+      "prompt": "For each person on the leads team ({{NAME_U02JARED}}, {{NAME_U03PINKMAN}}, {{NAME_U04LAGOON}}), send them this DM individually: 'Reminder: quarterly planning doc due Friday. Link: https://docs.internal/Q2-planning'. Do NOT create a group DM \u2014 three separate 1:1s.",
+      "success_criteria": [
+        "For every user u in the leads narrative group from global_assumptions excluding the agent (with the seeded state: U02JARED, U03PINKMAN, U04LAGOON), the 1:1 IM channel returned by conversations.open(users=[u]) contains a U05CLAUDE-authored message with text exactly 'Reminder: quarterly planning doc due Friday. Link: https://docs.internal/Q2-planning'.",
+        "No MPIM created during this prompt \u2014 conversations.list?types=mpim shows no new MPIM after the run."
+      ],
+      "notes": "v3 used usergroups.users.list for @leads. v4 uses explicit lookup \u2014 same fan-out, same DM correctness constraint."
+    },
+    {
+      "id": 38,
+      "title": "BUG-247 amplification",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:write",
+        "chat:write"
+      ],
+      "prompt": "Find the 'BUG-247: save-file corruption on macOS' message in #qa-bugs (scan channel history). If multiple such messages exist, refer to the latest one. Then do all of the following: (a) react with \ud83d\udc40, (b) share its permalink in #incidents with text 'Tracking: <permalink>', (c) schedule a follow-up message in #qa-bugs for 09:00 Pacific tomorrow saying 'Status update on BUG-247?'",
+      "success_criteria": [
+        "Target message resolves to workspace_state \u00a77 label M6 (verified by ts equality against msg_ts_map.M6) and reactions.get(M6) shows :eyes: from U05CLAUDE.",
+        "conversations.history(#incidents) contains a U05CLAUDE-authored message starting with 'Tracking: ' followed by a Slack permalink whose channel-id+ts components resolve back to M6.",
+        "chat.scheduledMessages.list(channel=#qa-bugs) contains a U05CLAUDE-authored entry with text exactly 'Status update on BUG-247?' and post_at within \u00b1120s of (benchmark_now per workspace_state \u00a70 + 23h)."
+      ],
+      "notes": "v3 used search.messages and pins.add. v4 uses conversations.history for locate and drops the pin step; see extension 38x for the search+pin variant."
+    },
+    {
+      "id": "38x",
+      "title": "BUG-247 amplification (with search + pin)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:write",
+        "chat:write",
+        "search:read",
+        "pins:write"
+      ],
+      "prompt": "Same as prompt 38, using search.messages to locate the BUG-247 message (if multiple such messages exist, refer to the latest one), plus: pin it in #qa-bugs.",
+      "success_criteria": [
+        "All of prompt 38's criteria.",
+        "search.messages was actually called (grader checks tool-call log).",
+        "pins.list(channel=#qa-bugs) contains the BUG-247 message (workspace_state §7 label M6, identified by ts == msg_ts_map.M6) after the run."
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Low-membership audit (ephemeral)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "For every public channel with fewer than 3 members, post an ephemeral message visible only to me in that channel: 'Low membership \u2014 consider archiving or recruiting.'",
+      "success_criteria": [
+        "Targeted channel set equals { c \u2208 workspace_state \u00a73.1 | c.is_archived=false AND num_members(c) < 3 } (computed at runtime via conversations.list?types=public_channel + conversations.info member counts). Under the seeded state plus single-token seeding constraints (per global_assumptions), this resolves to exactly #marketing.",
+        "For every targeted channel, chat.postEphemeral was called with user == U05CLAUDE and text == 'Low membership \u2014 consider archiving or recruiting.'",
+        "No non-ephemeral chat.postMessage was made into the targeted channels during this prompt."
+      ]
+    },
+    {
+      "id": 40,
+      "title": "My first post in #general",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:write"
+      ],
+      "prompt": "Find the first message I ever posted in #general. Return the text, ts, and permalink, then add a \ud83d\udc4b reaction to it.",
+      "success_criteria": [
+        "Identified message is argmin-by-ts over { m \u2208 conversations.history(#general) | m.user == U05CLAUDE }. Under the seeded state in workspace_state \u00a77 this is label M10c (verified by ts equality against msg_ts_map.M10c).",
+        "Returned permalink's channel-id+ts components match the identified message.",
+        "After the run, reactions.get(M10c) contains :wave: from U05CLAUDE."
+      ]
+    },
+    {
+      "id": 41,
+      "title": "[INFEASIBLE on free] Create and wire up a new user group",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "(Removed from v4 runs.) v3 prompt: 'Create a new user group launch-crew with members {{NAME_U05CLAUDE}}, {{NAME_U02JARED}}, {{NAME_U04LAGOON}} and link #launch-2026 as default channel.'",
+      "success_criteria": [],
+      "infeasible_reason": "usergroups.create / usergroups.update / usergroups.users.update all require a paid plan. User groups do not exist on free."
+    },
+    {
+      "id": 42,
+      "title": "Top 5 reacted in #announcements",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:read"
+      ],
+      "prompt": "In #announcements, find the top 5 messages by TOTAL reaction count (sum across all emojis). For each row return: text snippet (\u2264100 chars), total reaction count, top 3 EMOJI NAMES by count, and permalink.",
+      "success_criteria": [
+        "Returns at most 5 rows, sorted desc by total reaction count where total = sum(r.count for r in message.reactions).",
+        "Row 1 is the message with max(total_reaction_count) across #announcements per workspace_state \u00a76.2 \u2014 under the seeded state that is label M1 (sum = 6: 3\u00d7:eyes: + 3\u00d7:+1:). Verified by ts equality against msg_ts_map.M1.",
+        "Each row's 'top 3 emoji names' are derived from reactions.get's per-emoji `count` field, not from `users[].length`.",
+        "Permalinks resolve back to messages in workspace_state."
+      ]
+    },
+    {
+      "id": 43,
+      "title": "QA posting leaderboard + staleness DM",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "users:read",
+        "im:write",
+        "chat:write"
+      ],
+      "prompt": "For every member of #qa-bugs, return the ts of their most recent message in that channel (oldest-last). For anyone who has not posted there at all, send them a DM: 'Heads up \u2014 haven\\'t heard from you in #qa-bugs for a while, all good?'",
+      "success_criteria": [
+        "Leaderboard rows correspond exactly to conversations.members(#qa-bugs) per workspace_state \u00a73.1 \u2014 every member appears exactly once.",
+        "Per-row most-recent-ts is computed as max(m.ts for m in conversations.history(#qa-bugs) if m.user == row.user_id), or 'none' if the user has no posts. Under single-token seeding (per global_assumptions) only U05CLAUDE has posts, so every other member resolves to 'none' and U05CLAUDE resolves to the latest #qa-bugs ts in workspace_state \u00a77.",
+        "For every member u with no #qa-bugs posts (all non-agent members under the seeded state), conversations.open(users=[u]) contains a U05CLAUDE-authored message with text exactly 'Heads up \u2014 haven\\'t heard from you in #qa-bugs for a while, all good?'",
+        "Agent's self-handling is explicit in the output \u2014 either self-DM sent OR an explicit documented skip. A silent no-op fails the criterion."
+      ]
+    },
+    {
+      "id": 44,
+      "title": "Self-reschedule: cancel and re-create a scheduled message",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "Schedule a message in #marketing for 2026-04-20 at 09:00 Pacific with text: 'Weekly marketing standup \u2014 drop blockers below.' Then immediately cancel it and replace it with a new scheduled message at 10:00 Pacific tomorrow with text '[rescheduled] Weekly marketing standup \u2014 drop blockers below.'",
+      "success_criteria": [
+        "chat.scheduleMessage was called at least twice during the run (the original 09:00 schedule + the 10:00 replacement).",
+        "chat.deleteScheduledMessage was called once, targeting the scheduled_message_id returned by the agent's first schedule call.",
+        "End-state chat.scheduledMessages.list(channel=#marketing) contains: (a) the agent's new entry with text '[rescheduled] Weekly marketing standup \u2014 drop blockers below.' and post_at within \u00b1120s of (benchmark_now per workspace_state \u00a70 + 24h); (b) the seeded standup from workspace_state \u00a76.3 (Lagoon's, agent-authored under single-token seeding, post_at == benchmark_now + 23h).",
+        "The agent's first-call 09:00 entry is no longer present in chat.scheduledMessages.list."
+      ],
+      "notes": "Single-token seed: the seeded 09:00 standup is agent-authored; the agent COULD delete it but the prompt requires rescheduling a newly-created one, so the seeded 09:00 should remain untouched."
+    },
+    {
+      "id": 45,
+      "title": "Mark all my conversations as read",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "groups:read",
+        "im:read",
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "channels:write",
+        "groups:write",
+        "im:write"
+      ],
+      "prompt": "Go through every channel, private channel, and DM I'm a member of and advance my last_read to the latest message in each. Report a count of conversations marked. If you cannot enumerate MPIMs (which requires mpim:read \u2014 not in the granted scope set), state that explicitly in the report; do NOT skip it silently.",
+      "success_criteria": [
+        "Targeted conversation set equals { c | U05CLAUDE \u2208 members(c), c.type \u2208 {public_channel, private_channel, im} } from workspace_state \u00a73.1, \u00a73.2, \u00a73.4 (computed at runtime via conversations.list?types=public_channel,private_channel,im). For every such conversation, conversations.mark was called with ts == latest message's ts (per conversations.history).",
+        "Channels where U05CLAUDE \u2209 members were NOT targeted (e.g., D02_PI_LA per workspace_state \u00a73.4 must not appear).",
+        "A final count is reported and equals |targeted set|.",
+        "The MPIM gap (due to mpim:read absence in granted_scopes) is explicitly acknowledged in the report \u2014 silent skip fails this criterion."
+      ],
+      "notes": "v3 required MPIM enumeration as well. On the granted scope set mpim:read is absent, so the agent must either (a) report the MPIM gap explicitly or (b) request the mpim:read scope \u2014 either is acceptable, silent omission is not."
+    },
+    {
+      "id": 46,
+      "title": "All image attachments in #design-reviews",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history"
+      ],
+      "prompt": "In #design-reviews, find every message that has at least one image file attached. For each, return: author, each attached file's title and mimetype, and the message's permalink.",
+      "success_criteria": [
+        "Returned message set equals { m ∈ conversations.history(#design-reviews) | ∃ f ∈ m.files where f.mimetype.startswith('image/') }. Under workspace_state §6.5 + §7 this resolves to label M5 (verified by ts equality against msg_ts_map.M5).",
+        "For each returned message, the listed files are exactly the image-mimetype files attached to it per workspace_state §6.5 (e.g., the three tomb3_angle_*.png entries on M5).",
+        "Each row's permalink resolves back to the message in workspace state.",
+        "Non-image attachments (e.g., F01_LVL3_CONCEPTS.zip with mimetype application/zip on M5) are NOT listed."
+      ],
+      "notes": "files.info is unnecessary \u2014 conversations.history already embeds file metadata (name, mimetype, size). files:read scope is not required."
+    },
+    {
+      "id": 47,
+      "title": "Leadership digest",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "groups:read",
+        "groups:history",
+        "reactions:read",
+        "users:read",
+        "chat:write"
+      ],
+      "prompt": "Build a leadership digest and post it in #leads-only: (1) top 3 busiest channels by message count, (2) top 3 posters by message count across the workspace, (3) the 3 most-reacted-to messages (by total reaction count) with permalinks. One single message containing all three sections.",
+      "success_criteria": [
+        "Exactly one new U05CLAUDE-authored message exists in #leads-only after the prompt run, containing three labelled sections (busy channels / top posters / top-reacted).",
+        "Section (1) ranks channels by |conversations.history(c)| over the agent-accessible set (workspace_state §3.1 ∪ §3.2 where U05CLAUDE ∈ members); top-3 by that count.",
+        "Section (2) ranks user_ids by |{m | m.user == u}| summed across the same accessible-channel set. Under single-token seeding (per global_assumptions) U05CLAUDE dominates; agent should still produce a defensible top-3.",
+        "Section (3) ranks messages by sum(r.count) over message.reactions across the accessible set; top-3 with permalinks whose channel-id+ts components match real workspace-state messages.",
+        "All three sections are computed against the same accessible-channel set (internal consistency)."
+      ]
+    },
+    {
+      "id": 48,
+      "title": "DM {{NAME_U03PINKMAN}}, respecting DND snooze",
+      "difficulty": "L4",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read.email",
+        "dnd:read",
+        "im:write",
+        "chat:write"
+      ],
+      "prompt": "Send {{NAME_U03PINKMAN}} a DM: 'Got a minute to review BUG-247?'. But only if his DND snooze is NOT currently active. If it IS active, schedule the DM instead for 1 minute after his snooze ends.",
+      "success_criteria": [
+        "Agent calls dnd.info(user=U03PINKMAN) and branches on snooze_enabled. Under single-token seeding (per global_assumptions) U03PINKMAN's snooze is unseeded → snooze_enabled == false → direct-DM branch.",
+        "Direct branch: conversations.open(users=[U03PINKMAN]) IM contains a U05CLAUDE-authored message with text exactly 'Got a minute to review BUG-247?' authored within the prompt run window.",
+        "chat.scheduledMessages.list(channel=that DM) shows no new entry from this prompt."
+      ],
+      "notes": "The branch-on-snooze logic is still tested \u2014 the agent must check dnd.info before choosing a branch. Only the expected branch flips (direct vs. scheduled) because seed cannot set {{NAME_U03PINKMAN}}'s snooze."
+    },
+    {
+      "id": 49,
+      "title": "Set, list, then delete a personal reminder",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "reminders:read",
+        "reminders:write"
+      ],
+      "prompt": "Create a personal reminder for myself: text 'Check trailer copy', fires today at 14:00 Pacific. Then list my reminders and delete any reminder whose text contains 'Check trailer copy'.",
+      "success_criteria": [
+        "reminders.add was called with text='Check trailer copy' and time resolving to (benchmark_now per workspace_state §0 floored to local-day 14:00 America/Los_Angeles). Pre-existing reminders from workspace_state §6.4 (e.g., Miranda's 'Review tomb-3 crits') are unrelated and must remain untouched.",
+        "Mid-run reminders.list returned the newly-created reminder at least once.",
+        "After deletion, reminders.list contains no reminder whose text contains 'Check trailer copy'.",
+        "Reminders not matching the 'Check trailer copy' text predicate (per workspace_state §6.4) remain present in the post-run reminders.list."
+      ]
+    },
+    {
+      "id": 50,
+      "title": "[INFEASIBLE on free] Derive and persist @eng-active user group",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "(Removed from v4 runs.) v3 prompt: 'Create/update usergroup eng-active with members = engineers who posted in #eng-backend in last 14 days.'",
+      "success_criteria": [],
+      "infeasible_reason": "usergroups.create / usergroups.update / usergroups.users.update require a paid plan.",
+      "notes": "A core equivalent exists: 'list the engineers who posted in #eng-backend in the last 14 days'. That is already tested implicitly by prompts 14 and 32 combined. Adding a third is redundant."
+    },
+    {
+      "id": 51,
+      "title": "[INFEASIBLE on free] Admin onboarding flow",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "(Removed from v4 runs.) v3 prompt: 'Onboard Aditi Roy via admin.users.invite, then add to channels, then DM welcome.'",
+      "success_criteria": [],
+      "infeasible_reason": "admin.users.invite requires Enterprise Grid. There is no free-plan equivalent for programmatic workspace invites \u2014 free workspaces invite via slack.com UI or the SCIM API (paid)."
+    },
+    {
+      "id": 52,
+      "title": "Find {{NAME_U03PINKMAN}}'s full name & channels (via fallback enumeration)",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "users:read",
+        "users:read.email",
+        "channels:read",
+        "groups:read"
+      ],
+      "prompt": "I don't remember {{NAME_U03PINKMAN}}'s real full name. Find it. Then list every public channel, private channel, and DM that {{NAME_U03PINKMAN}} is a member of, sorted alphabetically by channel/DM name or ID. Do NOT call users.conversations on {{NAME_U03PINKMAN}} (that requires admin scope on Enterprise Grid, which we do not have) \u2014 instead, enumerate via conversations.list + conversations.members.",
+      "success_criteria": [
+        "Returned profile fields match workspace_state \u00a72 row for U03PINKMAN: real_name == row's Real name field, display_name == row's Display name field (resolved via users.info / users.profile.get on U03PINKMAN, not hardcoded).",
+        "Returned conversation list equals { c | U03PINKMAN \u2208 conversations.members(c), c.is_member-by-agent==true } \u2014 i.e., channels the agent can see AND U03PINKMAN belongs to. Under workspace_state \u00a73 this resolves to the public channels in \u00a73.1 listing U03PINKMAN as a member, plus the private channels in \u00a73.2 where both U03PINKMAN AND U05CLAUDE are members.",
+        "Does NOT list any channel where U05CLAUDE \u2209 members (e.g., DMs or MPIMs from \u00a73.4/\u00a73.5 that U05CLAUDE isn't part of) \u2014 load-bearing fact \u00a78.6/\u00a78.8 in workspace_state. Missing these is NOT a failure; inventing their membership IS a failure.",
+        "List is sorted alphabetically by channel/DM name (with ID fallback for nameless DMs)."
+      ],
+      "notes": "v3 notes mentioned an admin-path fallback. On free, only the enumeration fallback is possible \u2014 this prompt now enforces that path."
+    },
+    {
+      "id": 53,
+      "title": "Search MY DM with {{NAME_U02JARED}} for 'pacing'",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "im:read",
+        "im:history",
+        "im:write",
+        "users:read.email"
+      ],
+      "prompt": "In my 1:1 DM with {{NAME_U02JARED}}, find every message that contains 'pacing' or 'boss fight'. Return each match with ts and text.",
+      "success_criteria": [
+        "Target DM resolves to the IM channel whose users == {U05CLAUDE, U02JARED} \u2014 workspace_state \u00a73.4 label D04_JA_CL (id derivable from dm_id_map.D04_JA_CL).",
+        "Returned matches equal { m \u2208 conversations.history(D04_JA_CL) | 'pacing' \u2208 m.text OR 'boss fight' \u2208 m.text } \u2014 match by ts equality against any 'pacing'/'boss fight'-bearing message labels in workspace_state \u00a77 for that DM.",
+        "Agent does NOT call conversations.history on any IM where U05CLAUDE \u2209 members (e.g., D02_PI_LA per workspace_state \u00a73.4 / load-bearing fact \u00a78.8) and does NOT fabricate matches that aren't in the channel's actual history."
+      ],
+      "notes": "v3 targeted D03_MI_CL (the prior agent's DM with {{NAME_U05CLAUDE}} Okonkwo). In Scenario A {{NAME_U05CLAUDE}} IS the agent so that DM collapses to a self-DM and does not exist; the test is retargeted to D04_JA_CL."
+    },
+    {
+      "id": 54,
+      "title": "Alpha-ship reaction math + cross-ref (history-scoped)",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:read"
+      ],
+      "prompt": "Find the #announcements message about the alpha build shipping. If multiple such messages exist, refer to the latest one. Sum the reaction counts across all emojis on it (note: a user who reacted with multiple emojis is counted per-reaction). Then scan #general via conversations.history for any message that references the alpha build or the ship date. Report both numbers: total-reaction-sum and cross-reference-match-count.",
+      "success_criteria": [
+        "Target message in #announcements resolves to workspace_state \u00a77 label M1 (latest 'Alpha build shipping' message; verified by ts equality against msg_ts_map.M1).",
+        "total_reaction_sum equals sum(r.count for r in reactions.get(M1).reactions) \u2014 derived at runtime, not hardcoded. Under workspace_state \u00a76.2 the seeded reactions on M1 sum to 6 (3\u00d7 :eyes: + 3\u00d7 :+1:).",
+        "Cross-reference scan calls conversations.history(channel=#general) covering full channel history (no time-window filter applied).",
+        "Reported cross-reference count equals |{ m \u2208 conversations.history(#general) | m.text references alpha build OR ship date }|. Under workspace_state \u00a77 this matches label M10d only ('FYI \u2014 alpha demo will be shared with press mid-May.'), giving count=1.",
+        "Agent's prose is consistent with the reported count and the matched message ts."
+      ],
+      "notes": "v3 used search.messages for the cross-ref and a 14-day post-announcement window. v4 drops the time window (Slack assigns real ts on post; bench-clock offsets cannot be enforced) and uses conversations.history over the full #general channel. search:read is not required."
+    },
+    {
+      "id": 55,
+      "title": "Close out tile-loader thread",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:write",
+        "chat:write"
+      ],
+      "prompt": "For the thread in #eng-backend about the tile loader crash (the parent message mentions 'level-4 tile loader'; if multiple such messages exist, refer to the latest one): (1) summarize the thread in 2\u20134 sentences that cover the repro, the root cause, and the BUG-### tracking, (2) add a \u2705 reaction to the parent message, (3) post a final reply in the thread: 'Resolved in #12345. Closing.'",
+      "success_criteria": [
+        "Target parent message resolves to workspace_state \u00a77 label M2 (latest 'level-4 tile loader' message, parent of thread T1; verified by ts equality against msg_ts_map.M2). Thread replies are \u00a77 'Threads' T1 entries (M3, M4).",
+        "Summary content reflects the thread's seeded text in workspace_state \u00a77: repro details from M2, root-cause analysis from M3, and BUG-### tracking from M4 (BUG-247 filing). Specific facts to surface are derivable from those messages \u2014 not hardcoded.",
+        "After the run, reactions.get(M2) contains :white_check_mark: from U05CLAUDE.",
+        "conversations.replies(channel=#eng-backend, thread_ts=msg_ts_map.M2) contains a new U05CLAUDE-authored reply with text exactly 'Resolved in #12345. Closing.'"
+      ],
+      "notes": "v3 also required pinning M2 in #eng-backend. Pin step removed for core; see extension prompt 55x."
+    },
+    {
+      "id": "55x",
+      "title": "Close out tile-loader thread (with pin)",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "reactions:write",
+        "chat:write",
+        "pins:write"
+      ],
+      "prompt": "Same as prompt 55, plus: pin the parent message (M2) in #eng-backend.",
+      "success_criteria": [
+        "All of prompt 55's criteria.",
+        "pins.list(channel=#eng-backend) contains the tile-loader thread parent message (workspace_state §7 label M2, identified by ts == msg_ts_map.M2) after the run."
+      ]
+    },
+    {
+      "id": 56,
+      "title": "Quiet-until-Monday self-DND + announce + schedule lift",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "dnd:write",
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "Declare a quiet period in #general: (1) set my OWN DND snooze to end on 2026-04-20 at 09:00 America/Los_Angeles (benchmark_now + 23h). (2) Post in #general 'Quiet period in effect \u2014 async only until Monday 9am.' (3) Schedule a message for 2026-04-20 at 09:05 America/Los_Angeles (benchmark_now + 23h5m) in #general saying 'Quiet period lifted.'",
+      "success_criteria": [
+        "dnd.info on the agent reports snooze_endtime within \u00b1120s of (benchmark_now per workspace_state \u00a70 + 23h).",
+        "conversations.history(#general) contains a new U05CLAUDE-authored message with text exactly 'Quiet period in effect \u2014 async only until Monday 9am.'",
+        "chat.scheduledMessages.list(channel=#general) contains a new U05CLAUDE-authored entry with text exactly 'Quiet period lifted.' and post_at within \u00b1120s of (benchmark_now per workspace_state \u00a70 + 23h5m)."
+      ],
+      "notes": "v3 required pinning the notice. Pin step removed for core; see extension prompt 56x."
+    },
+    {
+      "id": "56x",
+      "title": "Quiet-until-Monday self-DND (with pin)",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "dnd:write",
+        "channels:read",
+        "chat:write",
+        "pins:write"
+      ],
+      "prompt": "Same as prompt 56, plus: pin the 'Quiet period in effect' notice. The scheduled lift message should additionally end with the reminder: '(Please unpin the \"Quiet period in effect\" notice manually \u2014 chat.scheduleMessage cannot unpin.)'",
+      "success_criteria": [
+        "All of prompt 56's criteria.",
+        "pins.list(channel=#general) contains the new U05CLAUDE-authored 'Quiet period in effect \u2014 async only until Monday 9am.' notice posted in this run (identified by ts of the new message, not by a seeded label).",
+        "The scheduled-lift entry in chat.scheduledMessages.list(#general) has text ending with the literal substring '(Please unpin the \"Quiet period in effect\" notice manually \u2014 chat.scheduleMessage cannot unpin.)'"
+      ]
+    },
+    {
+      "id": 57,
+      "title": "Unused custom emoji",
+      "difficulty": "L5",
+      "category": "search",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "emoji:read",
+        "reactions:read",
+        "search:read"
+      ],
+      "prompt": "List every custom emoji in the workspace. For each, determine whether it has been used as a reaction anywhere in the workspace. Return the names of any custom emoji that appear UNUSED, plus a one-line summary of your sampling method.",
+      "success_criteria": [
+        "Custom-emoji enumeration via emoji.list returns exactly the names defined in workspace_state \u00a75 (under the seeded state: :raider_skull:, :gold_gold:, :ship_it_raider:). Aliases must be resolved to their underlying name (e.g., :ship_it_raider: \u2192 :ship_it: per \u00a75).",
+        "Per-emoji 'used' flag is computed against reactions across the agent-accessible message set (workspace_state \u00a76.2 reactions). Flagged-unused = { e \u2208 custom_emoji | \u2200 msg \u2208 accessible: e \u2209 reactions(msg) }.",
+        "Under workspace_state \u00a75+\u00a76.2 the unused-flag predicate fires on :gold_gold: only \u2014 :raider_skull: appears in M11's reactions, :ship_it_raider: appears in M17's reactions per \u00a76.2.",
+        "Includes a one-line methodology note (e.g., 'sampled all accessible channels' history' or 'used search.messages with hasreaction:')."
+      ],
+      "notes": "Extension because emoji.list and search.messages both require extra scopes. A pure-reactions:read fallback (scan every accessible channel's history, aggregate reactions) is possible but laborious; accept as an additional variant if the agent attempts it."
+    },
+    {
+      "id": 58,
+      "title": "ci-bot silence audit across channels",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:history",
+        "chat:write"
+      ],
+      "prompt": "Identify every channel where ci-bot is a member. For each, check whether ci-bot has posted there. If any such channel has no ci-bot posts, post a separate notice in #incidents for each silent channel: '\u26a0\ufe0f ci-bot has been silent in #<channel> \u2014 escalate.'",
+      "success_criteria": [
+        "Agent enumerates ci-bot membership via conversations.list + conversations.members (NOT users.conversations on another user, which would require admin scope).",
+        "ci-bot membership set equals { c \u2208 workspace_state \u00a73.1 \u222a \u00a73.2 | ci-bot user_id \u2208 c.members }. Under the seeded state \u00a73.1 this resolves to channels listing ci-bot in their member column (e.g., #general, #random, #eng-backend, #incidents).",
+        "For each ci-bot-member channel c, silent_flag(c) = |{ m \u2208 conversations.history(c) | m.user == ci-bot }| == 0. Under single-token seeding (per global_assumptions) ci-bot has no seeded posts, so every ci-bot-member channel is silent.",
+        "conversations.history(#incidents) contains exactly |silent_channels| new U05CLAUDE-authored messages, one per silent channel, each with text exactly '\u26a0\ufe0f ci-bot has been silent in #<channel> \u2014 escalate.' substituting the channel's name. The set of channels named in those notices equals the silent_channels set (including #incidents itself when it is silent)."
+      ]
+    },
+    {
+      "id": 59,
+      "title": "Upload a file with comment (files.uploadV2)",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "files:write",
+        "channels:read",
+        "chat:write"
+      ],
+      "prompt": "Upload a small text file named 'smoke-test.txt' containing the text 'Hintas MCP smoke-test' to #eng-backend, with the initial comment 'Smoke-test artifact uploaded by the MCP benchmark.' The upload must be associated with the message (single attached file).",
+      "success_criteria": [
+        "files.list filtered to user=U05CLAUDE returns a new file with name == 'smoke-test.txt', mimetype starting with 'text/', and content body containing 'Hintas MCP smoke-test'.",
+        "The file's `channels` (or `shares`) field contains the channel-id of #eng-backend per workspace_state §3.1.",
+        "conversations.history(#eng-backend) contains a U05CLAUDE-authored message attaching exactly that file (m.files length == 1, file_id matches) and with initial-comment / message-text equal to 'Smoke-test artifact uploaded by the MCP benchmark.'"
+      ],
+      "notes": "Slack's legacy files.upload is deprecated as of late 2024. Prefer files.uploadV2 (getUploadURLExternal + completeUploadExternal). Grader also accepts a successful legacy files.upload call if that is all the MCP exposes."
+    },
+    {
+      "id": 60,
+      "title": "End-to-end code-freeze orchestration",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "channels:read",
+        "channels:write",
+        "chat:write",
+        "users:read.email",
+        "im:write"
+      ],
+      "prompt": "We are declaring a code freeze until 2026-04-30 Pacific. Do the following IN ORDER \u2014 do not reorder: (a) post in #announcements exactly 'Code freeze in effect until 2026-04-30. No merges to main.' (b) FIRST, read the current topic of #eng-backend and #eng-frontend via conversations.info and save both strings. THEN set both channels' topics to '\ud83d\udeab CODE FREEZE until 2026-04-30'. Do not re-read the topics after you overwrite them. (c) Schedule a message in each of the two engineering channels for 2026-05-01 at 08:00 America/Los_Angeles that says 'Freeze lifted.' AND includes, verbatim, the original pre-overwrite topic string for that channel so a human can restore it. (d) DM {{NAME_U02JARED}} a bulleted checklist of the subtasks with the permalink to the announcement and references to the two scheduled messages.",
+      "success_criteria": [
+        "conversations.history(#announcements) contains a new U05CLAUDE-authored message with text exactly 'Code freeze in effect until 2026-04-30. No merges to main.'",
+        "conversations.info(#eng-backend) and conversations.info(#eng-frontend) both report topic.value == '\ud83d\udeab CODE FREEZE until 2026-04-30'.",
+        "chat.scheduledMessages.list(#eng-backend) contains a new U05CLAUDE-authored entry whose text contains the literal substring 'Freeze lifted.' AND the literal pre-run topic string for #eng-backend per workspace_state \u00a73.1 (i.e., the topic value before the overwrite).",
+        "chat.scheduledMessages.list(#eng-frontend) contains a new U05CLAUDE-authored entry whose text contains the literal substring 'Freeze lifted.' AND the literal pre-run topic string for #eng-frontend per workspace_state \u00a73.1.",
+        "Both scheduled messages have post_at within \u00b1120s of (benchmark_now per workspace_state \u00a70 floored to 2026-05-01T08:00:00 America/Los_Angeles).",
+        "Conversations.history of the 1:1 IM with U02JARED contains a U05CLAUDE-authored message with at least 4 bullets and a Slack permalink whose channel-id+ts components match the new #announcements freeze message."
+      ],
+      "notes": "v3 required pinning the #announcements freeze message. Pin step removed for core; see extension prompt 60x. Ordering constraint on step (b) is graded via tool-call log: conversations.info on both engineering channels must come BEFORE conversations.setTopic on them."
+    },
+    {
+      "id": "60x",
+      "title": "End-to-end code-freeze orchestration (with pin)",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "channels:read",
+        "channels:write",
+        "chat:write",
+        "users:read.email",
+        "im:write",
+        "pins:write"
+      ],
+      "prompt": "Same as prompt 60, plus: pin the freeze message in #announcements.",
+      "success_criteria": [
+        "All of prompt 60's criteria.",
+        "pins.list(channel=#announcements) contains the new U05CLAUDE-authored 'Code freeze in effect until 2026-04-30. No merges to main.' message posted during this run (identified by ts of the new message)."
+      ]
+    }
+  ],
+  "prompt_summary": {
+    "total_entries": 65,
+    "core_count": 48,
+    "extension_count": 12,
+    "infeasible_count": 5,
+    "core_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      10,
+      11,
+      13,
+      14,
+      15,
+      17,
+      20,
+      21,
+      22,
+      23,
+      24,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      52,
+      53,
+      54,
+      55,
+      56,
+      58,
+      60
+    ],
+    "extension_ids": [
+      6,
+      9,
+      12,
+      18,
+      25,
+      "36x",
+      "38x",
+      "55x",
+      "56x",
+      57,
+      59,
+      "60x"
+    ],
+    "infeasible_ids": [
+      16,
+      19,
+      41,
+      50,
+      51
+    ],
+    "difficulty_distribution_core": {
+      "L1": [
+        3,
+        7
+      ],
+      "L2": [
+        1,
+        2,
+        4,
+        5,
+        11,
+        14,
+        15,
+        17,
+        20,
+        21
+      ],
+      "L3": [
+        8,
+        10,
+        13,
+        22,
+        23,
+        24,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        40,
+        49,
+        53
+      ],
+      "L4": [
+        36,
+        37,
+        38,
+        39,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        52,
+        54,
+        55
+      ],
+      "L5": [
+        56,
+        58,
+        60
+      ]
+    }
+  }
+}

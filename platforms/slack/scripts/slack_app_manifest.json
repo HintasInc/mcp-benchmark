@@ -1,0 +1,49 @@
+{
+  "display_information": {
+    "name": "Hintas Bench 1",
+    "description": "Seeder and reset tool for the Slack benchmark workspace.",
+    "background_color": "#1a1a2e"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Hintas Bench 1",
+      "always_online": false
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "user": [
+        "channels:read",
+        "channels:write",
+        "channels:history",
+        "groups:read",
+        "groups:write",
+        "groups:history",
+        "im:read",
+        "im:write",
+        "im:history",
+        "mpim:read",
+        "mpim:write",
+        "mpim:history",
+        "users:read",
+        "users:read.email",
+        "chat:write",
+        "reactions:write",
+        "reminders:write",
+        "search:read",
+        "canvases:read",
+        "canvases:write",
+        "files:read",
+        "files:write"
+      ],
+      "bot": [
+        "channels:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

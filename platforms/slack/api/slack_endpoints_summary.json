@@ -1,0 +1,1046 @@
+[
+  {
+    "path": "/admin.apps.approve",
+    "verb": "POST",
+    "summary": "",
+    "description": "Approve an app for installation on a workspace."
+  },
+  {
+    "path": "/admin.apps.approved.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List approved apps for an org or workspace."
+  },
+  {
+    "path": "/admin.apps.requests.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List app requests for a team/workspace."
+  },
+  {
+    "path": "/admin.apps.restrict",
+    "verb": "POST",
+    "summary": "",
+    "description": "Restrict an app for installation on a workspace."
+  },
+  {
+    "path": "/admin.apps.restricted.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List restricted apps for an org or workspace."
+  },
+  {
+    "path": "/admin.conversations.archive",
+    "verb": "POST",
+    "summary": "",
+    "description": "Archive a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.convertToPrivate",
+    "verb": "POST",
+    "summary": "",
+    "description": "Convert a public channel to a private channel."
+  },
+  {
+    "path": "/admin.conversations.create",
+    "verb": "POST",
+    "summary": "",
+    "description": "Create a public or private channel-based conversation."
+  },
+  {
+    "path": "/admin.conversations.delete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Delete a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.disconnectShared",
+    "verb": "POST",
+    "summary": "",
+    "description": "Disconnect a connected channel from one or more workspaces."
+  },
+  {
+    "path": "/admin.conversations.ekm.listOriginalConnectedChannelInfo",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all disconnected channels\u2014i.e., channels that were once connected to other workspaces and then disconnected\u2014and the corresponding original channel IDs for key revocation with EKM."
+  },
+  {
+    "path": "/admin.conversations.getConversationPrefs",
+    "verb": "GET",
+    "summary": "",
+    "description": "Get conversation preferences for a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.getTeams",
+    "verb": "GET",
+    "summary": "",
+    "description": "Get all the workspaces a given public or private channel is connected to within this Enterprise org."
+  },
+  {
+    "path": "/admin.conversations.invite",
+    "verb": "POST",
+    "summary": "",
+    "description": "Invite a user to a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.rename",
+    "verb": "POST",
+    "summary": "",
+    "description": "Rename a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.restrictAccess.addGroup",
+    "verb": "POST",
+    "summary": "",
+    "description": "Add an allowlist of IDP groups for accessing a channel"
+  },
+  {
+    "path": "/admin.conversations.restrictAccess.listGroups",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all IDP Groups linked to a channel"
+  },
+  {
+    "path": "/admin.conversations.restrictAccess.removeGroup",
+    "verb": "POST",
+    "summary": "",
+    "description": "Remove a linked IDP group linked from a private channel"
+  },
+  {
+    "path": "/admin.conversations.search",
+    "verb": "GET",
+    "summary": "",
+    "description": "Search for public or private channels in an Enterprise organization."
+  },
+  {
+    "path": "/admin.conversations.setConversationPrefs",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the posting permissions for a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.setTeams",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the workspaces in an Enterprise grid org that connect to a public or private channel."
+  },
+  {
+    "path": "/admin.conversations.unarchive",
+    "verb": "POST",
+    "summary": "",
+    "description": "Unarchive a public or private channel."
+  },
+  {
+    "path": "/admin.emoji.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Add an emoji."
+  },
+  {
+    "path": "/admin.emoji.addAlias",
+    "verb": "POST",
+    "summary": "",
+    "description": "Add an emoji alias."
+  },
+  {
+    "path": "/admin.emoji.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List emoji for an Enterprise Grid organization."
+  },
+  {
+    "path": "/admin.emoji.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Remove an emoji across an Enterprise Grid organization"
+  },
+  {
+    "path": "/admin.emoji.rename",
+    "verb": "POST",
+    "summary": "",
+    "description": "Rename an emoji."
+  },
+  {
+    "path": "/admin.inviteRequests.approve",
+    "verb": "POST",
+    "summary": "",
+    "description": "Approve a workspace invite request."
+  },
+  {
+    "path": "/admin.inviteRequests.approved.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all approved workspace invite requests."
+  },
+  {
+    "path": "/admin.inviteRequests.denied.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all denied workspace invite requests."
+  },
+  {
+    "path": "/admin.inviteRequests.deny",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deny a workspace invite request."
+  },
+  {
+    "path": "/admin.inviteRequests.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all pending workspace invite requests."
+  },
+  {
+    "path": "/admin.teams.admins.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all of the admins on a given workspace."
+  },
+  {
+    "path": "/admin.teams.create",
+    "verb": "POST",
+    "summary": "",
+    "description": "Create an Enterprise team."
+  },
+  {
+    "path": "/admin.teams.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all teams on an Enterprise organization"
+  },
+  {
+    "path": "/admin.teams.owners.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all of the owners on a given workspace."
+  },
+  {
+    "path": "/admin.teams.settings.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Fetch information about settings in a workspace"
+  },
+  {
+    "path": "/admin.teams.settings.setDefaultChannels",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the default channels of a workspace."
+  },
+  {
+    "path": "/admin.teams.settings.setDescription",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the description of a given workspace."
+  },
+  {
+    "path": "/admin.teams.settings.setDiscoverability",
+    "verb": "POST",
+    "summary": "",
+    "description": "An API method that allows admins to set the discoverability of a given workspace"
+  },
+  {
+    "path": "/admin.teams.settings.setIcon",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sets the icon of a workspace."
+  },
+  {
+    "path": "/admin.teams.settings.setName",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the name of a given workspace."
+  },
+  {
+    "path": "/admin.usergroups.addChannels",
+    "verb": "POST",
+    "summary": "",
+    "description": "Add one or more default channels to an IDP group."
+  },
+  {
+    "path": "/admin.usergroups.addTeams",
+    "verb": "POST",
+    "summary": "",
+    "description": "Associate one or more default workspaces with an organization-wide IDP group."
+  },
+  {
+    "path": "/admin.usergroups.listChannels",
+    "verb": "GET",
+    "summary": "",
+    "description": "List the channels linked to an org-level IDP group (user group)."
+  },
+  {
+    "path": "/admin.usergroups.removeChannels",
+    "verb": "POST",
+    "summary": "",
+    "description": "Remove one or more default channels from an org-level IDP group (user group)."
+  },
+  {
+    "path": "/admin.users.assign",
+    "verb": "POST",
+    "summary": "",
+    "description": "Add an Enterprise user to a workspace."
+  },
+  {
+    "path": "/admin.users.invite",
+    "verb": "POST",
+    "summary": "",
+    "description": "Invite a user to a workspace."
+  },
+  {
+    "path": "/admin.users.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List users on a workspace"
+  },
+  {
+    "path": "/admin.users.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Remove a user from a workspace."
+  },
+  {
+    "path": "/admin.users.session.invalidate",
+    "verb": "POST",
+    "summary": "",
+    "description": "Invalidate a single session for a user by session_id"
+  },
+  {
+    "path": "/admin.users.session.reset",
+    "verb": "POST",
+    "summary": "",
+    "description": "Wipes all valid sessions on all devices for a given user"
+  },
+  {
+    "path": "/admin.users.setAdmin",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set an existing guest, regular user, or owner to be an admin user."
+  },
+  {
+    "path": "/admin.users.setExpiration",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set an expiration for a guest user"
+  },
+  {
+    "path": "/admin.users.setOwner",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set an existing guest, regular user, or admin user to be a workspace owner."
+  },
+  {
+    "path": "/admin.users.setRegular",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set an existing guest user, admin user, or owner to be a regular user."
+  },
+  {
+    "path": "/api.test",
+    "verb": "GET",
+    "summary": "",
+    "description": "Checks API calling code."
+  },
+  {
+    "path": "/apps.event.authorizations.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Get a list of authorizations for the given event context. Each authorization represents an app installation that the event is visible to."
+  },
+  {
+    "path": "/apps.permissions.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns list of permissions this app has on a team."
+  },
+  {
+    "path": "/apps.permissions.request",
+    "verb": "GET",
+    "summary": "",
+    "description": "Allows an app to request additional scopes"
+  },
+  {
+    "path": "/apps.permissions.resources.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns list of resource grants this app has on a team."
+  },
+  {
+    "path": "/apps.permissions.scopes.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns list of scopes this app has on a team."
+  },
+  {
+    "path": "/apps.permissions.users.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns list of user grants and corresponding scopes this app has on a team."
+  },
+  {
+    "path": "/apps.permissions.users.request",
+    "verb": "GET",
+    "summary": "",
+    "description": "Enables an app to trigger a permissions modal to grant an app access to a user access scope."
+  },
+  {
+    "path": "/apps.uninstall",
+    "verb": "GET",
+    "summary": "",
+    "description": "Uninstalls your app from a workspace."
+  },
+  {
+    "path": "/auth.revoke",
+    "verb": "GET",
+    "summary": "",
+    "description": "Revokes a token."
+  },
+  {
+    "path": "/auth.test",
+    "verb": "GET",
+    "summary": "",
+    "description": "Checks authentication & identity."
+  },
+  {
+    "path": "/bots.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets information about a bot user."
+  },
+  {
+    "path": "/calls.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Registers a new Call."
+  },
+  {
+    "path": "/calls.end",
+    "verb": "POST",
+    "summary": "",
+    "description": "Ends a Call."
+  },
+  {
+    "path": "/calls.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns information about a Call."
+  },
+  {
+    "path": "/calls.participants.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Registers new participants added to a Call."
+  },
+  {
+    "path": "/calls.participants.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Registers participants removed from a Call."
+  },
+  {
+    "path": "/calls.update",
+    "verb": "POST",
+    "summary": "",
+    "description": "Updates information about a Call."
+  },
+  {
+    "path": "/chat.delete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deletes a message."
+  },
+  {
+    "path": "/chat.deleteScheduledMessage",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deletes a pending scheduled message from the queue."
+  },
+  {
+    "path": "/chat.getPermalink",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve a permalink URL for a specific extant message"
+  },
+  {
+    "path": "/chat.meMessage",
+    "verb": "POST",
+    "summary": "",
+    "description": "Share a me message into a channel."
+  },
+  {
+    "path": "/chat.postEphemeral",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sends an ephemeral message to a user in a channel."
+  },
+  {
+    "path": "/chat.postMessage",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sends a message to a channel."
+  },
+  {
+    "path": "/chat.scheduleMessage",
+    "verb": "POST",
+    "summary": "",
+    "description": "Schedules a message to be sent to a channel."
+  },
+  {
+    "path": "/chat.scheduledMessages.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Returns a list of scheduled messages."
+  },
+  {
+    "path": "/chat.unfurl",
+    "verb": "POST",
+    "summary": "",
+    "description": "Provide custom unfurl behavior for user-posted URLs"
+  },
+  {
+    "path": "/chat.update",
+    "verb": "POST",
+    "summary": "",
+    "description": "Updates a message."
+  },
+  {
+    "path": "/conversations.archive",
+    "verb": "POST",
+    "summary": "",
+    "description": "Archives a conversation."
+  },
+  {
+    "path": "/conversations.close",
+    "verb": "POST",
+    "summary": "",
+    "description": "Closes a direct message or multi-person direct message."
+  },
+  {
+    "path": "/conversations.create",
+    "verb": "POST",
+    "summary": "",
+    "description": "Initiates a public or private channel-based conversation"
+  },
+  {
+    "path": "/conversations.history",
+    "verb": "GET",
+    "summary": "",
+    "description": "Fetches a conversation's history of messages and events."
+  },
+  {
+    "path": "/conversations.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve information about a conversation."
+  },
+  {
+    "path": "/conversations.invite",
+    "verb": "POST",
+    "summary": "",
+    "description": "Invites users to a channel."
+  },
+  {
+    "path": "/conversations.join",
+    "verb": "POST",
+    "summary": "",
+    "description": "Joins an existing conversation."
+  },
+  {
+    "path": "/conversations.kick",
+    "verb": "POST",
+    "summary": "",
+    "description": "Removes a user from a conversation."
+  },
+  {
+    "path": "/conversations.leave",
+    "verb": "POST",
+    "summary": "",
+    "description": "Leaves a conversation."
+  },
+  {
+    "path": "/conversations.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists all channels in a Slack team."
+  },
+  {
+    "path": "/conversations.mark",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sets the read cursor in a channel."
+  },
+  {
+    "path": "/conversations.members",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve members of a conversation."
+  },
+  {
+    "path": "/conversations.open",
+    "verb": "POST",
+    "summary": "",
+    "description": "Opens or resumes a direct message or multi-person direct message."
+  },
+  {
+    "path": "/conversations.rename",
+    "verb": "POST",
+    "summary": "",
+    "description": "Renames a conversation."
+  },
+  {
+    "path": "/conversations.replies",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve a thread of messages posted to a conversation"
+  },
+  {
+    "path": "/conversations.setPurpose",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sets the purpose for a conversation."
+  },
+  {
+    "path": "/conversations.setTopic",
+    "verb": "POST",
+    "summary": "",
+    "description": "Sets the topic for a conversation."
+  },
+  {
+    "path": "/conversations.unarchive",
+    "verb": "POST",
+    "summary": "",
+    "description": "Reverses conversation archival."
+  },
+  {
+    "path": "/dialog.open",
+    "verb": "GET",
+    "summary": "",
+    "description": "Open a dialog with a user"
+  },
+  {
+    "path": "/dnd.endDnd",
+    "verb": "POST",
+    "summary": "",
+    "description": "Ends the current user's Do Not Disturb session immediately."
+  },
+  {
+    "path": "/dnd.endSnooze",
+    "verb": "POST",
+    "summary": "",
+    "description": "Ends the current user's snooze mode immediately."
+  },
+  {
+    "path": "/dnd.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieves a user's current Do Not Disturb status."
+  },
+  {
+    "path": "/dnd.setSnooze",
+    "verb": "POST",
+    "summary": "",
+    "description": "Turns on Do Not Disturb mode for the current user, or changes its duration."
+  },
+  {
+    "path": "/dnd.teamInfo",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieves the Do Not Disturb status for up to 50 users on a team."
+  },
+  {
+    "path": "/emoji.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists custom emoji for a team."
+  },
+  {
+    "path": "/files.comments.delete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deletes an existing comment on a file."
+  },
+  {
+    "path": "/files.delete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deletes a file."
+  },
+  {
+    "path": "/files.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets information about a file."
+  },
+  {
+    "path": "/files.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List for a team, in a channel, or from a user with applied filters."
+  },
+  {
+    "path": "/files.remote.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Adds a file from a remote service"
+  },
+  {
+    "path": "/files.remote.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve information about a remote file added to Slack"
+  },
+  {
+    "path": "/files.remote.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve information about a remote file added to Slack"
+  },
+  {
+    "path": "/files.remote.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Remove a remote file."
+  },
+  {
+    "path": "/files.remote.share",
+    "verb": "GET",
+    "summary": "",
+    "description": "Share a remote file into a channel."
+  },
+  {
+    "path": "/files.remote.update",
+    "verb": "POST",
+    "summary": "",
+    "description": "Updates an existing remote file."
+  },
+  {
+    "path": "/files.revokePublicURL",
+    "verb": "POST",
+    "summary": "",
+    "description": "Revokes public/external sharing access for a file"
+  },
+  {
+    "path": "/files.sharedPublicURL",
+    "verb": "POST",
+    "summary": "",
+    "description": "Enables a file for public/external sharing."
+  },
+  {
+    "path": "/files.upload",
+    "verb": "POST",
+    "summary": "",
+    "description": "Uploads or creates a file."
+  },
+  {
+    "path": "/migration.exchange",
+    "verb": "GET",
+    "summary": "",
+    "description": "For Enterprise Grid workspaces, map local user IDs to global user IDs"
+  },
+  {
+    "path": "/oauth.access",
+    "verb": "GET",
+    "summary": "",
+    "description": "Exchanges a temporary OAuth verifier code for an access token."
+  },
+  {
+    "path": "/oauth.token",
+    "verb": "GET",
+    "summary": "",
+    "description": "Exchanges a temporary OAuth verifier code for a workspace token."
+  },
+  {
+    "path": "/oauth.v2.access",
+    "verb": "GET",
+    "summary": "",
+    "description": "Exchanges a temporary OAuth verifier code for an access token."
+  },
+  {
+    "path": "/pins.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Pins an item to a channel."
+  },
+  {
+    "path": "/pins.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists items pinned to a channel."
+  },
+  {
+    "path": "/pins.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Un-pins an item from a channel."
+  },
+  {
+    "path": "/reactions.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Adds a reaction to an item."
+  },
+  {
+    "path": "/reactions.get",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets reactions for an item."
+  },
+  {
+    "path": "/reactions.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists reactions made by a user."
+  },
+  {
+    "path": "/reactions.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Removes a reaction from an item."
+  },
+  {
+    "path": "/reminders.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Creates a reminder."
+  },
+  {
+    "path": "/reminders.complete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Marks a reminder as complete."
+  },
+  {
+    "path": "/reminders.delete",
+    "verb": "POST",
+    "summary": "",
+    "description": "Deletes a reminder."
+  },
+  {
+    "path": "/reminders.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets information about a reminder."
+  },
+  {
+    "path": "/reminders.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists all reminders created by or for a given user."
+  },
+  {
+    "path": "/rtm.connect",
+    "verb": "GET",
+    "summary": "",
+    "description": "Starts a Real Time Messaging session."
+  },
+  {
+    "path": "/search.messages",
+    "verb": "GET",
+    "summary": "",
+    "description": "Searches for messages matching a query."
+  },
+  {
+    "path": "/stars.add",
+    "verb": "POST",
+    "summary": "",
+    "description": "Adds a star to an item."
+  },
+  {
+    "path": "/stars.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists stars for a user."
+  },
+  {
+    "path": "/stars.remove",
+    "verb": "POST",
+    "summary": "",
+    "description": "Removes a star from an item."
+  },
+  {
+    "path": "/team.accessLogs",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets the access logs for the current team."
+  },
+  {
+    "path": "/team.billableInfo",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets billable users information for the current team."
+  },
+  {
+    "path": "/team.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets information about the current team."
+  },
+  {
+    "path": "/team.integrationLogs",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets the integration logs for the current team."
+  },
+  {
+    "path": "/team.profile.get",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieve a team's profile."
+  },
+  {
+    "path": "/usergroups.create",
+    "verb": "POST",
+    "summary": "",
+    "description": "Create a User Group"
+  },
+  {
+    "path": "/usergroups.disable",
+    "verb": "POST",
+    "summary": "",
+    "description": "Disable an existing User Group"
+  },
+  {
+    "path": "/usergroups.enable",
+    "verb": "POST",
+    "summary": "",
+    "description": "Enable a User Group"
+  },
+  {
+    "path": "/usergroups.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all User Groups for a team"
+  },
+  {
+    "path": "/usergroups.update",
+    "verb": "POST",
+    "summary": "",
+    "description": "Update an existing User Group"
+  },
+  {
+    "path": "/usergroups.users.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "List all users in a User Group"
+  },
+  {
+    "path": "/usergroups.users.update",
+    "verb": "POST",
+    "summary": "",
+    "description": "Update the list of users for a User Group"
+  },
+  {
+    "path": "/users.conversations",
+    "verb": "GET",
+    "summary": "",
+    "description": "List conversations the calling user may access."
+  },
+  {
+    "path": "/users.deletePhoto",
+    "verb": "POST",
+    "summary": "",
+    "description": "Delete the user profile photo"
+  },
+  {
+    "path": "/users.getPresence",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets user presence information."
+  },
+  {
+    "path": "/users.identity",
+    "verb": "GET",
+    "summary": "",
+    "description": "Get a user's identity."
+  },
+  {
+    "path": "/users.info",
+    "verb": "GET",
+    "summary": "",
+    "description": "Gets information about a user."
+  },
+  {
+    "path": "/users.list",
+    "verb": "GET",
+    "summary": "",
+    "description": "Lists all users in a Slack team."
+  },
+  {
+    "path": "/users.lookupByEmail",
+    "verb": "GET",
+    "summary": "",
+    "description": "Find a user with an email address."
+  },
+  {
+    "path": "/users.profile.get",
+    "verb": "GET",
+    "summary": "",
+    "description": "Retrieves a user's profile information."
+  },
+  {
+    "path": "/users.profile.set",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the profile information for a user."
+  },
+  {
+    "path": "/users.setActive",
+    "verb": "POST",
+    "summary": "",
+    "description": "Marked a user as active. Deprecated and non-functional."
+  },
+  {
+    "path": "/users.setPhoto",
+    "verb": "POST",
+    "summary": "",
+    "description": "Set the user profile photo"
+  },
+  {
+    "path": "/users.setPresence",
+    "verb": "POST",
+    "summary": "",
+    "description": "Manually sets user presence."
+  },
+  {
+    "path": "/views.open",
+    "verb": "GET",
+    "summary": "",
+    "description": "Open a view for a user."
+  },
+  {
+    "path": "/views.publish",
+    "verb": "GET",
+    "summary": "",
+    "description": "Publish a static view for a User."
+  },
+  {
+    "path": "/views.push",
+    "verb": "GET",
+    "summary": "",
+    "description": "Push a view onto the stack of a root view."
+  },
+  {
+    "path": "/views.update",
+    "verb": "GET",
+    "summary": "",
+    "description": "Update an existing view."
+  },
+  {
+    "path": "/workflows.stepCompleted",
+    "verb": "GET",
+    "summary": "",
+    "description": "Indicate that an app's step in a workflow completed execution."
+  },
+  {
+    "path": "/workflows.stepFailed",
+    "verb": "GET",
+    "summary": "",
+    "description": "Indicate that an app's step in a workflow failed to execute."
+  },
+  {
+    "path": "/workflows.updateStep",
+    "verb": "GET",
+    "summary": "",
+    "description": "Update the configuration for a workflow extension step."
+  }
+]

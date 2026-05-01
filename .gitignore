@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
+
+# Local env & per-user Claude config
+.env
+**/.env
+!.env.example
+.claude/settings.local.json
+**/*.local.json
+
+# Benchmark outputs (anchored to platforms/ so we don't accidentally ignore
+# src/benchmarking/analysis/final/, etc.)
+/platforms/*/runs/**
+!/platforms/*/runs/**/
+!/platforms/*/runs/**/analysis.json
+!/platforms/*/runs/**/analysis.md
+/archive/

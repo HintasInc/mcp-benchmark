@@ -1,0 +1,1262 @@
+{
+  "timestamp": "20260429_230701__hintas__topk10_batch-off_max8_rag-off",
+  "stacks": [
+    "hintas"
+  ],
+  "per_prompt": {
+    "1": {
+      "title": "List public channels with counts",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called conversations_list with exclude_archived=true and types=public_channel, received real data for all 13 channels with name/ID/member counts, and the result_text is fully grounded in the tool result.",
+        "noteworthy_paths": [
+          "First two call_tool_chain attempts returned {success:true,logs:[]} with no data; agent recovered by using return + console.log pattern on third attempt."
+        ],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 1415,
+        "wall_clock_s": 43.31
+      }
+    },
+    "2": {
+      "title": "Members of #design-reviews",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent used conversations_list + conversations_members + users_list to resolve the channel's members; tool result confirms [rhea, miranda, devon] with correct user IDs and display names.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 1147,
+        "wall_clock_s": 36.49
+      }
+    },
+    "3": {
+      "title": "Post hello in #random",
+      "difficulty": "L1",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "chat_postMessage returned {ok:true, channel:C0AU6LDS6V8, text:'hello world'} confirming the message was posted successfully in #random.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 264,
+        "wall_clock_s": 19.59
+      }
+    },
+    "4": {
+      "title": "Jared's profile card",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called users_list to find Jared's ID (U0AU9T1UUBW) then users_info to get full profile; all returned fields (display_name=jared, tz=America/New_York, email=prtmasapkota+jared@gmail.com) are grounded in tool results. Title was empty string in API, shown as 'not set' which is acceptable.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 940,
+        "wall_clock_s": 34.97
+      }
+    },
+    "5": {
+      "title": "Recent #announcements (oldest-first)",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched conversations_history on #announcements and resolved user info to get author display names; the 5 messages returned in oldest-first order are fully grounded in tool results with correct texts and timestamps.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 1241,
+        "wall_clock_s": 26.15
+      }
+    },
+    "7": {
+      "title": "Update #eng-backend topic",
+      "difficulty": "L1",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called conversations_setTopic with the exact required topic string on channel C0AV0UACGSC; the result was {success:true,logs:[]} with no error, indicating the JS ran without exception and the Slack API call succeeded.",
+        "noteworthy_paths": [
+          "Result lacked nonMcpContentResults (only {success:true,logs:[]}); code had no error handling but no error was thrown, consistent with successful execution."
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 378,
+        "wall_clock_s": 17.48
+      }
+    },
+    "8": {
+      "title": "Thumbs-up latest posted msg in #marketing",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent correctly fetched conversations_history and filtered for posted messages (non-scheduled), then called reactions_add with name='+1'; the final result was {success:true,logs:[]} with no error thrown, consistent with successful execution.",
+        "noteworthy_paths": [
+          "Result lacked nonMcpContentResults confirmation; code logic correctly excluded subtype messages but final result was unconfirmed. Treated as PASS since no error was thrown and code was correct."
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 869,
+        "wall_clock_s": 30.53
+      }
+    },
+    "10": {
+      "title": "My DND state",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called dnd_info and returned all fields (dnd_enabled, next_dnd_start_ts, next_dnd_end_ts, snooze_enabled, snooze_endtime) directly from the API; the answer is fully grounded in the tool result. The snooze_enabled=true reflects actual workspace state at run time.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 2387,
+        "wall_clock_s": 46.82
+      }
+    },
+    "11": {
+      "title": "Find Jared by email",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent correctly used prtmasapkota+jared@gmail.com to lookup Jared's user ID (U0AU9T1UUBW) then users_info to get display name (Jared Blackwood) and email (prtmasapkota+jared@gmail.com), all grounded in tool results.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 21,
+        "total_tokens": 754,
+        "wall_clock_s": 23.85
+      }
+    },
+    "13": {
+      "title": "Ping QA team in #qa-bugs",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved Pinkman (U0AU2SWRS9K) and Tomas (U0AUK6QNBPT) by name, then posted '<@U0AU2SWRS9K> <@U0AUK6QNBPT> Triage meeting moved to 2pm.' to #qa-bugs with ok:true confirmed in tool result.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 5615,
+        "total_tokens": 3886,
+        "wall_clock_s": 42.53
+      }
+    },
+    "14": {
+      "title": "Engineering team roster",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent computed the union of #eng-backend and #eng-frontend members, excluded Miranda (U0AU46LC6F8) as instructed, and returned jared, devon, rhea \u2014 all grounded in conversations_members and users_list tool results.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "call_tool_chain",
+          "search_tools"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 2863,
+        "wall_clock_s": 61.54
+      }
+    },
+    "15": {
+      "title": "DM Pinkman for a call",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found Pinkman (U0AU2SWRS9K), opened a DM via conversations_open, then called chat_postMessage which returned {ok:true, channel:D0AU69N937C, ts:...} confirming the message 'Free for a 15-min call tomorrow?' was delivered.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 1069,
+        "wall_clock_s": 25.28
+      }
+    },
+    "17": {
+      "title": "Schedule Monday kickoff",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "The Slack API rejected the schedule request with 'time_in_past' because the requested date (2026-04-20 09:00 PT) predates the benchmark run (2026-04-29); the scheduled message was never created. This is an environment rejection blocking the task.",
+        "noteworthy_paths": [
+          "Agent correctly identified the issue and informed the user, but the benchmark anchors 2026-04-20 as the intended target date \u2014 the run date mismatch caused the failure."
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 1485,
+        "wall_clock_s": 41.96
+      }
+    },
+    "20": {
+      "title": "Permalink to the alpha-ship announcement",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent scanned conversations_history on #announcements (C0AU6LEQ4RG), found the 'Alpha build shipping' message (ts=1777518497.192279), then called chat_getPermalink which returned the correct permalink grounded in both channel ID and timestamp.",
+        "noteworthy_paths": [
+          "search_messages failed due to missing_scope; agent gracefully fell back to conversations_history filtering."
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 22,
+        "total_tokens": 1315,
+        "wall_clock_s": 40.76
+      }
+    },
+    "21": {
+      "title": "Post, then edit a typo (chat.update)",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent posted 'Teh trailer drops thursday.' then immediately called chat_update with the corrected text; result was {success:true,logs:[]} with no error thrown, and the code had throw-on-error guards, indicating both operations succeeded.",
+        "noteworthy_paths": [
+          "Result lacked nonMcpContentResults; however code had if(!postResult.ok) throw and if(!editResult.ok) throw guards, so absence of error confirms success."
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 793,
+        "wall_clock_s": 25.75
+      }
+    },
+    "22": {
+      "title": "Spin up #gold-master-feedback",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found the archived channel (C0AU7D7RA59), unarchived it, set topic to 'Gold master feedback, May 2026', invited Jared/Pinkman/Lagoon, and posted the exact welcome message \u2014 all confirmed with ok:true in tool results.",
+        "noteworthy_paths": [
+          "Channel already existed as archived from a previous run; agent correctly detected name_taken, found the channel, unarchived it, then completed all remaining steps."
+        ],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 2718,
+        "wall_clock_s": 58.17
+      }
+    },
+    "23": {
+      "title": "BUG-### digest in #qa-bugs",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent scanned conversations_history on #qa-bugs, found all 4 BUG- messages, resolved author display name to 'miranda' via users_info, and fetched permalinks via chat_getPermalink \u2014 all grounded in tool results and sorted ascending by ts.",
+        "noteworthy_paths": [
+          "Multiple tool_chain attempts needed before finding the correct console.log return pattern to surface results."
+        ],
+        "tool_calls": {
+          "complete": 8,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 28,
+        "total_tokens": 4627,
+        "wall_clock_s": 99.88
+      }
+    },
+    "24": {
+      "title": "Lisbon offsite RSVP tally",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent correctly found the thread and classified all 3 replies semantically (yes/no/yes), but could not attribute replies to distinct named users because all thread messages share the same user ID (single-token seeding); the RSVP count is correct but individual attribution is missing.",
+        "noteworthy_paths": [
+          "Single-token seeding means all replies appear under U0AU46LC6F8 (miranda); agent correctly reported this limitation rather than fabricating attributions."
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 2766,
+        "wall_clock_s": 59.23
+      }
+    },
+    "26": {
+      "title": "Rename #eng-frontend to #eng-client",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called conversations_rename on C0AVA3939PS with name='eng-client' (ok:true) then chat_postMessage with exact required text 'Heads up \u2014 this channel was renamed from #eng-frontend.' (ok:true, ts confirmed).",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 802,
+        "wall_clock_s": 26.11
+      }
+    },
+    "27": {
+      "title": "Revive #old-playtest-2025",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent unarchived C0AU4JL8EHL (ok:true), posted 'Reviving this channel for regression playtests.' (ts confirmed), and invited Pinkman (U0AU2SWRS9K) and Tomas (U0AUK6QNBPT) \u2014 all confirmed via tool result logs.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 8,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 995,
+        "total_tokens": 1899,
+        "wall_clock_s": 40.95
+      }
+    },
+    "28": {
+      "title": "Leads presence + DND snapshot",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called users_getPresence and dnd_info for all three leads (Jared, Pinkman, Lagoon) and returned presence=away and snooze_enabled=absent (interpreted as No) for all, grounded in tool results. DND response lacked snooze_enabled field which correctly maps to snooze=false.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 26,
+        "total_tokens": 2620,
+        "wall_clock_s": 62.55
+      }
+    },
+    "29": {
+      "title": "Private channels I can see",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent used conversations_list with types=private_channel and surfaced all 9 accessible private channels (leads-only, launch-2026, 7 incident channels) with correct member counts, all grounded in tool results.",
+        "noteworthy_paths": [
+          "Multiple return-value pattern failures before agent switched to console.log approach to surface data."
+        ],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 1172,
+        "wall_clock_s": 29.72
+      }
+    },
+    "30": {
+      "title": "Remove a stale reaction (reactions.remove)",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found the 'Team Lisbon offsite' message (ts=1777518511.042109), added :eyes: (reactions_add ok:true), then removed :eyes: (reactions_remove ok:true) \u2014 all confirmed in tool result logs.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 1375,
+        "wall_clock_s": 33.66
+      }
+    },
+    "31": {
+      "title": "ci-bot activity in #incidents",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent scanned #incidents history and found no ci-bot messages, then posted 'CI Bot appears quiet \u2014 please verify it is alive.' with ok:true confirmed in tool result (found:false, posted:true, ts confirmed).",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 1196,
+        "wall_clock_s": 32.96
+      }
+    },
+    "32": {
+      "title": "#launch-2026 posting check",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved members (Lagoon, Miranda, Jared) and 30-day message history for #launch-2026, correctly identified Miranda Okonkwo as the only poster (tool result: posted:true for U0AU46LC6F8), consistent with single-token seeding.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 21,
+        "total_tokens": 2118,
+        "wall_clock_s": 44.29
+      }
+    },
+    "33": {
+      "title": "Tomb-3 concept files",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Agent found the message (ts=1777518503.147229) but could not retrieve file metadata (name, size, mimetype) because the token lacks the files:read scope; the required output of file details was not delivered.",
+        "noteworthy_paths": [
+          "Agent correctly identified the capability gap (files:read missing scope) and reported it honestly rather than fabricating file details."
+        ],
+        "tool_calls": {
+          "complete": 13,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 42,
+        "total_tokens": 4373,
+        "wall_clock_s": 117.88
+      }
+    },
+    "34": {
+      "title": "MPIM with Jared and Pinkman",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved both users and opened an MPIM via conversations_open, with tool result confirming channel C0AUDUDLH1Q, jared (U0AU9T1UUBW), pinkman (U0AU2SWRS9K), and message_sent:true.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 9,
+        "total_tokens": 773,
+        "wall_clock_s": 28.02
+      }
+    },
+    "35": {
+      "title": "Kick Rhea; re-invite Ember",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Rhea was successfully kicked (conversations_kick ok:true), but the agent found no user named Ember in the workspace and did not attempt an API invite \u2014 it never received nor reported an API error conveying deactivated/disabled state as the success criteria requires.",
+        "noteworthy_paths": [
+          "Workspace has only 11 users; Ember does not exist, so the agent could not surface a deactivated/disabled error reason from the API."
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 1236,
+        "wall_clock_s": 30.9
+      }
+    },
+    "36": {
+      "title": "Spin up incident war room",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent created private channel incident-2026-04-29 (C0B0Q7GASBG), set topic to 'Sev1: save corruption post-patch \u2014 war room', invited all 5 members from #incidents (ci-bot was absent from #incidents so none excluded), and posted 'Incident commander: Jared. Comms: Lagoon. Scribe: Pinkman.' \u2014 all confirmed in tool results. Channel name uses run date (2026-04-29) rather than a fixed benchmark anchor date, which is drift not failure.",
+        "noteworthy_paths": [
+          "Intermediate code error (Cannot read properties of undefined 'id') on ciBot lookup was recovered; agent correctly detected ci-bot was not in #incidents and included all 5 human members.",
+          "Channel was partially created in first attempt then confirmed via conversations_list on retry."
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 42,
+        "total_tokens": 8785,
+        "wall_clock_s": 192.27
+      }
+    },
+    "37": {
+      "title": "DM every lead individually",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved all three leads (jared U0AU9T1UUBW, pinkman U0AU2SWRS9K, lagoon U0AU2T0C76H), opened individual 1:1 DM channels, and sent the exact message to each \u2014 tool result confirmed sent:true with distinct channel IDs per recipient.",
+        "noteworthy_paths": [
+          "First call_tool_chain returned {success:true,logs:[]} without data; agent re-ran with explicit return statement and got full confirmation."
+        ],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 1858,
+        "wall_clock_s": 47.36
+      }
+    },
+    "38": {
+      "title": "BUG-247 amplification",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found BUG-247 message (ts=1777518506.515109), added :eyes: reaction (ok:true), posted 'Tracking: <permalink>' in #incidents (ts confirmed), and scheduled 'Status update on BUG-247?' in #qa-bugs for 2026-04-30 09:00 PDT (ID Q0B0SSERWAW) \u2014 all three actions confirmed in tool result logs.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 2602,
+        "wall_clock_s": 48.48
+      }
+    },
+    "39": {
+      "title": "Low-membership audit (ephemeral)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent scanned all 13 public channels, correctly identified #marketing (2 members) as the only channel below 3, and posted chat_postEphemeral with ok:true using the authenticated user's ID (U0AU46LC6F8 = miranda = U05CLAUDE in this run).",
+        "noteworthy_paths": [
+          "users_lookupByEmail for preston@carpkingdom.com returned users_not_found; agent fell back to auth_test to obtain miranda's user ID, which is the correct ephemeral target."
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 33,
+        "total_tokens": 2468,
+        "wall_clock_s": 65.11
+      }
+    },
+    "40": {
+      "title": "My first post in #general",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched #general history oldest-first, identified the earliest message (ts=1777518494.585889, 'Welcome to Hintas's Slack workspace.'), retrieved permalink, and added :wave: reaction \u2014 all confirmed in tool result logs (reaction added: true).",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 2053,
+        "wall_clock_s": 50.24
+      }
+    },
+    "42": {
+      "title": "Top 5 reacted in #announcements",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent correctly identified the top message (Alpha build, ts=1777518497.192279) and ranked by total reaction count, but chat_getPermalink returned invalid_auth for all messages \u2014 permalinks were not delivered as required by success criteria.",
+        "noteworthy_paths": [
+          "Reaction counts showed 1 per emoji (single-token seeding drift); workspace state lists 6 total. Agent reported what the API returned.",
+          "chat_getPermalink consistently failed with invalid_auth; agent acknowledged this but did not construct the permalink manually from channel+ts despite having both values."
+        ],
+        "tool_calls": {
+          "complete": 8,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 27,
+        "total_tokens": 4988,
+        "wall_clock_s": 105.73
+      }
+    },
+    "43": {
+      "title": "QA posting leaderboard + staleness DM",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent enumerated all 4 #qa-bugs members, correctly identified miranda as the only poster (ts=1777518507.804789), and sent the exact DM text to pinkman, jared, and tomas \u2014 all confirmed with dm ts values in tool result. Miranda's skip was implicitly documented (she had a recent post, not inactive).",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 5036,
+        "wall_clock_s": 92.18
+      }
+    },
+    "44": {
+      "title": "Self-reschedule: cancel and re-create a scheduled message",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "The rescheduled message (Q0B0BE3T6CX, '[rescheduled] Weekly marketing standup...', 2026-05-01 10:00 PDT) was successfully created, but the initial 09:00 schedule failed with time_in_past and no chat_deleteScheduledMessage call was made \u2014 the delete criterion is unmet.",
+        "noteworthy_paths": [
+          "Env rejection (time_in_past) on the 2026-04-20 date caused the first scheduleMessage to return no ID, making delete impossible. Agent handled this gracefully but the delete criteria cannot be satisfied."
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 1602,
+        "wall_clock_s": 39.25
+      }
+    },
+    "45": {
+      "title": "Mark all my conversations as read",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent enumerated public_channel (13), private_channel (9), im (11), explicitly reported mpim:read missing_scope and could not mark MPIMs, marked 28 conversations with 5 skipped for no messages \u2014 all criteria met including explicit MPIM gap acknowledgment.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 1546,
+        "wall_clock_s": 36.97
+      }
+    },
+    "46": {
+      "title": "All image attachments in #design-reviews",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "The workspace-state message M5 (Tomb-3, ts=1777518503.147229) has three image files attached, but conversations_history did not surface file metadata because the token lacks files:read scope \u2014 the agent correctly diagnosed this gap but could not deliver the required file listing.",
+        "noteworthy_paths": [
+          "Agent correctly identified both files:read and search:read as missing, then verified via raw message dump that no file objects appeared in history. This is an honest capability-gap report, not fabrication."
+        ],
+        "tool_calls": {
+          "complete": 10,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 33,
+        "total_tokens": 4575,
+        "wall_clock_s": 91.06
+      }
+    },
+    "47": {
+      "title": "Leadership digest",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent computed top-3 channels (qa-bugs/announcements/eng-backend), top poster (miranda 25 messages), and top-3 reacted messages with permalinks constructed from channel+ts, then posted a single message to #leads-only (ok:true, ts=1777522333.858419).",
+        "noteworthy_paths": [
+          "Agent scanned only public channels for busiest-channel ranking, missing private channels; under the accessible-set criterion this could be partial, but public-channel data is the dominant set.",
+          "chat_getPermalink returned invalid_auth; agent constructed permalinks manually from channel_id+ts which is functionally correct."
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 22,
+        "total_tokens": 5699,
+        "wall_clock_s": 108.43
+      }
+    },
+    "48": {
+      "title": "DM Pinkman, respecting DND snooze",
+      "difficulty": "L4",
+      "category": "edge_case",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent called dnd_info for pinkman (U0AU2SWRS9K), confirmed snooze_enabled was not set (no active snooze), and sent the DM 'Got a minute to review BUG-247?' immediately \u2014 confirmed in tool result logs (ts=1777522412.865149).",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 1242,
+        "wall_clock_s": 30.88
+      }
+    },
+    "49": {
+      "title": "Set, list, then delete a personal reminder",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "reminders_add succeeded (id=Rm0B0PGSLNA1, time=1777582800, text='Check trailer copy'), but reminders_list returned empty immediately after creation \u2014 the mid-run list criterion was not met. The delete call also returned not_found due to the same ephemeral state issue.",
+        "noteworthy_paths": [
+          "Benchmark workspace reminders API appears to have ephemeral state: created reminder is not returned by subsequent list or info calls. Agent correctly diagnosed this as a demo environment limitation."
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 3059,
+        "wall_clock_s": 62.9
+      }
+    },
+    "52": {
+      "title": "Find Pinkman's full name & channels (via fallback enumeration)",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved Pinkman's real name as Saul Rivera via users_list, then enumerated all conversations via conversations.list + conversations.members (per prompt instructions), found 15 conversations sorted alphabetically, and explicitly noted mpim:read scope limitation.",
+        "noteworthy_paths": [
+          "Initial conversations_list call with types=public_channel,private_channel,mpim,im failed with missing_scope; agent recovered by querying each type separately."
+        ],
+        "tool_calls": {
+          "complete": 10,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 31,
+        "total_tokens": 3827,
+        "wall_clock_s": 68.03
+      }
+    },
+    "53": {
+      "title": "Search MY DM with Jared for 'pacing'",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved Jared (U0AU9T1UUBW), opened the 1:1 DM (D0AV0HL18MN via conversations_open), fetched 30 days of history, and returned the single matching message (ts=1777518517.003499) containing both 'pacing' and 'boss fight' \u2014 grounded in tool result.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 22,
+        "total_tokens": 1965,
+        "wall_clock_s": 55.87
+      }
+    },
+    "54": {
+      "title": "Alpha-ship reaction math + cross-ref (history-scoped)",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Agent correctly found the alpha-build message (ts=1777518497.192279) and computed total_reaction_sum=2, but applied a 14-day time window filter to the #general scan (oldest=announcement ts, latest=+14d) instead of full channel history \u2014 this caused the cross-reference message M10d ('FYI \u2014 alpha demo will be shared with press mid-May.') to be missed, reporting cross-reference-count=0 instead of 1.",
+        "noteworthy_paths": [
+          "The prompt says 'scan #general via conversations.history' with no time constraint; criteria explicitly require no time-window filter. Agent's 14-day window is a logic error, not a drift issue."
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 25,
+        "total_tokens": 3858,
+        "wall_clock_s": 61.02
+      }
+    },
+    "55": {
+      "title": "Close out tile-loader thread",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found the parent message (ts=1777518499.833019), fetched the 3-message thread, added :white_check_mark: reaction (ok:true), posted the reply 'Resolved in #12345. Closing.' (ts=1777522902.634099), and summarized the thread covering repro (macOS 14 only), root cause (async streamer drops chunk when GPU memory tight), and BUG-247 tracking.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 26,
+        "total_tokens": 2507,
+        "wall_clock_s": 68.04
+      }
+    },
+    "56": {
+      "title": "Enable DND, post quiet-period notice, schedule end reminder",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "DND snooze enabled (ok:true, snooze_remaining=82800s) and quiet-period notice posted to #general (ok:true, ts=1777523033.883699) with exact required text. Scheduled end reminder failed with time_in_past (timestamp 1776701100 = 2026-04-20 09:05 PDT is prior to run date 2026-04-29), so the third criterion was not met.",
+        "noteworthy_paths": [
+          "The scheduled message timestamp references 2026-04-20, which predates the benchmark run date of 2026-04-29. This is a prompt anchor date that became time_in_past by run time, not an agent logic error."
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 2241,
+        "wall_clock_s": 49.31
+      }
+    },
+    "58": {
+      "title": "Find ci-bot and post deploy notices to #incidents",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Agent exhaustively searched users_list (11 members) and filtered for bots (is_bot=true), finding only hintas_bench_2 (B0AU6KEHFDY) and slackbot \u2014 ci-bot does not exist as a workspace member. With no ci-bot to resolve, the agent posted nothing to #incidents, leaving the required-output gap unfilled.",
+        "noteworthy_paths": [
+          "ci-bot is absent from the benchmark workspace entirely; agent correctly reported this rather than fabricating a user ID. No deploy notices were posted as a result."
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 21,
+        "total_tokens": 2614,
+        "wall_clock_s": 57.18
+      }
+    },
+    "60": {
+      "title": "Four-step channel coordination: announce, snapshot topics, schedule resets, DM Jared",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "All four ordered steps confirmed in a single call_tool_chain result: announcement posted to #general (ts=1777523339.570869), both channel topics read and overwritten with confirmation, scheduled reset messages created for #backend (Q0B15T4SF89) and #frontend (Q0B15T4SXQR), and DM sent to Jared Blackwood (U0AU9T1UUBW, ts=1777523340.235489) with permalink to the announcement.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 3102,
+        "wall_clock_s": 74.55
+      }
+    }
+  },
+  "aggregates": {
+    "hintas": {
+      "n": 48,
+      "pass": 36,
+      "partial": 6,
+      "fail": 6,
+      "error": 0,
+      "success_rate": 0.75,
+      "avg_initial_context": 3,
+      "avg_peak_context": 157.52083333333334,
+      "avg_wall_clock_s": 53.87895833333334,
+      "total_tokens": 114108,
+      "avg_tool_calls": 5.0625,
+      "total_tool_failures": 0
+    }
+  },
+  "breakdowns": {
+    "by_difficulty": {
+      "L1": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      },
+      "L2": {
+        "n": 10,
+        "success_rate": 0.8,
+        "partial": 0,
+        "fail": 2,
+        "error": 0
+      },
+      "L3": {
+        "n": 19,
+        "success_rate": 0.6842105263157895,
+        "partial": 4,
+        "fail": 2,
+        "error": 0
+      },
+      "L4": {
+        "n": 15,
+        "success_rate": 0.7333333333333333,
+        "partial": 2,
+        "fail": 2,
+        "error": 0
+      },
+      "L5": {
+        "n": 1,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      }
+    },
+    "by_category": {
+      "retrieval": {
+        "n": 11,
+        "success_rate": 0.8181818181818182,
+        "partial": 0,
+        "fail": 2,
+        "error": 0
+      },
+      "search": {
+        "n": 9,
+        "success_rate": 0.5555555555555556,
+        "partial": 2,
+        "fail": 2,
+        "error": 0
+      },
+      "write": {
+        "n": 10,
+        "success_rate": 0.8,
+        "partial": 1,
+        "fail": 1,
+        "error": 0
+      },
+      "workflow": {
+        "n": 5,
+        "success_rate": 0.4,
+        "partial": 2,
+        "fail": 1,
+        "error": 0
+      },
+      "orchestration": {
+        "n": 11,
+        "success_rate": 0.9090909090909091,
+        "partial": 1,
+        "fail": 0,
+        "error": 0
+      },
+      "edge_case": {
+        "n": 2,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+"""Hintas MCP benchmark harness."""
