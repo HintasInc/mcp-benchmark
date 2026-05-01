@@ -329,7 +329,7 @@ def render_run_links(L, runs, output_dir):
 
 
 def render_stack_config(L, runs):
-    """One sub-block per variant; columns are baseline MCP and the variant MCP."""
+    """Single combined table: parameter rows × baseline + every variant column."""
     if not any(r["hintas_params"] for r in runs):
         return
     baseline = runs[0]
@@ -340,26 +340,27 @@ def render_stack_config(L, runs):
 
     L.append("## MCP configuration")
     L.append("")
-    L.append("> Each variant block shows the parameters the variant run was launched "
-             "with, alongside the baseline MCP (which carries no Hintas params).")
+    L.append("> Variant columns show the parameters each variant run was launched with, "
+             "alongside the baseline MCP (which carries no Hintas params).")
     L.append("")
 
     differing_keys = [k for k, _ in HINTAS_PARAM_LABELS
-                      if len({v["hintas_params"].get(k) for v in variants}) > 1]
+                      if len({(v["hintas_params"] or {}).get(k) for v in variants}) > 1]
 
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        L.append(f"| Parameter | {baseline['label']} | {v['label']} |")
-        L.append("|:----------|:--------------:|:--------------:|")
-        for key, label_str in HINTAS_PARAM_LABELS:
-            b_val = fmt_param_value(baseline["hintas_params"].get(key)) \
-                if baseline["hintas_params"] else "—"
+    headers = ["Parameter", baseline["label"]] + [v["label"] for v in variants]
+    aligns  = [":----------"] + [":--------------:"] * (len(headers) - 1)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    for key, label_str in HINTAS_PARAM_LABELS:
+        b_val = fmt_param_value(baseline["hintas_params"].get(key)) \
+            if baseline["hintas_params"] else "—"
+        cells = [f"`{label_str}`", f"**{b_val}**"]
+        for v in variants:
             v_val = fmt_param_value(v["hintas_params"].get(key))
             mark = "  ⚠" if multi and key in differing_keys else ""
-            L.append(f"| `{label_str}` | **{b_val}** | **{v_val}**{mark} |")
-        L.append("")
+            cells.append(f"**{v_val}**{mark}")
+        L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
     if multi:
         if differing_keys:
@@ -382,51 +383,48 @@ def render_legend(L):
 
 
 def render_per_prompt_verdicts(L, per_prompt, ordered_ids, runs):
-    """One sub-table per variant; columns are baseline MCP and the variant MCP."""
+    """Single combined table with one verdict column per stack."""
     L.append("## Per-prompt verdicts")
     L.append("")
-    baseline = runs[0]
-    variants = runs[1:]
-    multi = len(variants) > 1
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        L.append(f"| ID | Title | Diff | {baseline['label']} | {v['label']} |")
-        L.append("|---:|:------|:----:|:------:|:------:|")
-        for pid in ordered_ids:
-            row = per_prompt[pid]
-            title = row["title"].replace("|", "\\|")
-            cells = [pid, title, row["difficulty"]]
-            for r in (baseline, v):
-                side = row["sides"].get(r["label"])
-                cells.append(f"{VERDICT_GLYPH[side['verdict']]} {side['verdict']}"
-                             if side else "—")
-            L.append("| " + " | ".join(cells) + " |")
-        L.append("")
+    headers = ["ID", "Title", "Diff"] + [r["label"] for r in runs]
+    aligns  = ["---:", ":------", ":----:"] + [":------:"] * len(runs)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    for pid in ordered_ids:
+        row = per_prompt[pid]
+        title = row["title"].replace("|", "\\|")
+        cells = [pid, title, row["difficulty"]]
+        for r in runs:
+            side = row["sides"].get(r["label"])
+            cells.append(f"{VERDICT_GLYPH[side['verdict']]} {side['verdict']}"
+                         if side else "—")
+        L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 def render_per_prompt_metrics(L, per_prompt, ordered_ids, runs, metric_key, metric_label, fmt):
-    """One sub-table per variant; columns are baseline, variant, Δ. Δ shown only when both PASS."""
+    """Single combined table: ID/Title, baseline value, every variant value,
+    then a Δ-vs-baseline column per variant. Δ is shown only when both stacks PASS."""
     baseline = runs[0]
     variants = runs[1:]
-    multi = len(variants) > 1
     L.append(f"## Per-prompt {metric_label}")
     L.append("")
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        L.append(f"| ID | Title | {baseline['label']} | {v['label']} | Δ {v['label']} vs {baseline['label']} |")
-        L.append("|---:|:------|---:|---:|---:|")
-        for pid in ordered_ids:
-            row = per_prompt[pid]
-            title = row["title"].replace("|", "\\|")
-            b_side = row["sides"].get(baseline["label"])
+    headers = ["ID", "Title", baseline["label"]] + [v["label"] for v in variants]
+    headers += [f"Δ {v['label']} vs {baseline['label']}" for v in variants]
+    aligns  = ["---:", ":------"] + ["---:"] * (len(headers) - 2)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    for pid in ordered_ids:
+        row = per_prompt[pid]
+        title = row["title"].replace("|", "\\|")
+        b_side = row["sides"].get(baseline["label"])
+        cells = [pid, title]
+        cells.append(fmt(b_side[metric_key]) if b_side else "—")
+        for v in variants:
             v_side = row["sides"].get(v["label"])
-            cells = [pid, title]
-            cells.append(fmt(b_side[metric_key]) if b_side else "—")
             cells.append(fmt(v_side[metric_key]) if v_side else "—")
+        for v in variants:
+            v_side = row["sides"].get(v["label"])
             if (b_side and v_side
                     and b_side["verdict"] == "PASS"
                     and v_side["verdict"] == "PASS"):
@@ -437,54 +435,54 @@ def render_per_prompt_metrics(L, per_prompt, ordered_ids, runs, metric_key, metr
                     cells.append(fmt_delta_float(delta, 1) + "s")
             else:
                 cells.append("*excl*")
-            L.append("| " + " | ".join(cells) + " |")
-        L.append("")
+        L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 def render_verdict_tally(L, runs, totals_by_label):
-    """Rows = verdict metrics, columns = baseline MCP + variant MCP (one sub-table per variant)."""
+    """Single combined table: rows = verdict metrics, columns = each stack."""
     L.append("## Verdict tallies")
     L.append("")
-    baseline = runs[0]
-    variants = runs[1:]
-    multi = len(variants) > 1
-    b_t = totals_by_label[baseline["label"]]
-    b_v = b_t["verdicts"]
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        v_t = totals_by_label[v["label"]]
-        v_v = v_t["verdicts"]
-        L.append(f"| Metric | {baseline['label']} | {v['label']} |")
-        L.append("|:-------|---:|---:|")
-        for k in VERDICT_KEYS:
-            L.append(f"| {k} | {b_v.get(k, 0)} | {v_v.get(k, 0)} |")
-        L.append(f"| Pass rate | {fmt_pct(b_t['pass_rate'])} | {fmt_pct(v_t['pass_rate'])} |")
-        L.append("")
+    headers = ["Metric"] + [r["label"] for r in runs]
+    aligns  = [":-------"] + ["---:"] * len(runs)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    for k in VERDICT_KEYS:
+        cells = [k]
+        for r in runs:
+            cells.append(str(totals_by_label[r["label"]]["verdicts"].get(k, 0)))
+        L.append("| " + " | ".join(cells) + " |")
+    cells = ["Pass rate"]
+    for r in runs:
+        cells.append(fmt_pct(totals_by_label[r["label"]]["pass_rate"]))
+    L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 def render_tool_tally(L, runs, totals_by_label):
-    """Rows = tool-call metrics, columns = baseline MCP + variant MCP (one sub-table per variant)."""
+    """Single combined table: rows = tool-call metrics, columns = each stack."""
     L.append("## Tool-call tallies (every prompt, regardless of verdict)")
     L.append("")
-    baseline = runs[0]
-    variants = runs[1:]
-    multi = len(variants) > 1
-    b_t = totals_by_label[baseline["label"]]
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        v_t = totals_by_label[v["label"]]
-        L.append(f"| Metric | {baseline['label']} | {v['label']} |")
-        L.append("|:-------|---:|---:|")
-        L.append(f"| Tools complete | {b_t['tools_passed']} | {v_t['tools_passed']} |")
-        L.append(f"| Tools failed | {b_t['tools_failed']} | {v_t['tools_failed']} |")
-        L.append(f"| Tools partial | {b_t['tools_partial']} | {v_t['tools_partial']} |")
-        L.append(f"| Total | {b_t['tools_total']} | {v_t['tools_total']} |")
-        L.append(f"| Tool pass rate | {fmt_pct(b_t['tool_pass_rate'])} | {fmt_pct(v_t['tool_pass_rate'])} |")
-        L.append("")
+    headers = ["Metric"] + [r["label"] for r in runs]
+    aligns  = [":-------"] + ["---:"] * len(runs)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    rows = (
+        ("Tools complete", "tools_passed"),
+        ("Tools failed",   "tools_failed"),
+        ("Tools partial",  "tools_partial"),
+        ("Total",          "tools_total"),
+    )
+    for label, key in rows:
+        cells = [label]
+        for r in runs:
+            cells.append(str(totals_by_label[r["label"]][key]))
+        L.append("| " + " | ".join(cells) + " |")
+    cells = ["Tool pass rate"]
+    for r in runs:
+        cells.append(fmt_pct(totals_by_label[r["label"]]["tool_pass_rate"]))
+    L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 COMPARABLE_ROWS = (
@@ -508,6 +506,7 @@ def _fmt_comparable(v, kind):
 
 
 def render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids):
+    """Single combined table: rows = comparable metrics, columns = each stack."""
     L.append("## Global comparable metrics (every stack PASS)")
     L.append("")
     cmp_str = ", ".join(comparable_ids) if comparable_ids else "(none)"
@@ -520,133 +519,169 @@ def render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids):
         L.append("")
         return
 
-    baseline = runs[0]
-    variants = runs[1:]
-    multi = len(variants) > 1
-
-    b_metrics = comparable_metrics(per_prompt, baseline["label"], comparable_ids)
-    for v in variants:
-        if multi:
-            L.append(f"### {v['label']}")
-            L.append("")
-        v_metrics = comparable_metrics(per_prompt, v["label"], comparable_ids)
-        L.append(f"| Metric | {baseline['label']} | {v['label']} |")
-        L.append("|:-------|---:|---:|")
-        for label, key, kind in COMPARABLE_ROWS:
-            b_cell = _fmt_comparable(b_metrics.get(key), kind)
-            v_cell = _fmt_comparable(v_metrics.get(key), kind)
-            L.append(f"| {label} | {b_cell} | {v_cell} |")
-        L.append("")
+    metrics_by_label = {
+        r["label"]: comparable_metrics(per_prompt, r["label"], comparable_ids)
+        for r in runs
+    }
+    headers = ["Metric"] + [r["label"] for r in runs]
+    aligns  = [":-------"] + ["---:"] * len(runs)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+    for label, key, kind in COMPARABLE_ROWS:
+        cells = [label]
+        for r in runs:
+            cells.append(_fmt_comparable(metrics_by_label[r["label"]].get(key), kind))
+        L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 def render_pair_comparable(L, runs, per_prompt, ordered_ids):
-    """One comparable-only metrics block per (baseline, variant) pair."""
+    """Single combined table. For each variant a 3-column block (baseline value
+    on that pair / variant value / Δ) so all pairs sit side-by-side. The
+    baseline value differs across blocks because each pair uses its own
+    intersection."""
     baseline = runs[0]
+    variants = runs[1:]
+    multi = len(variants) > 1
     L.append("## Per-pair comparable metrics (baseline ∩ variant PASS)")
     L.append("")
     L.append("> For each variant, this restricts to prompts where **both** the "
              "baseline and that variant passed — the fair apples-to-apples "
              "subset for token, speed, and context comparisons.")
+    if multi:
+        L.append("> Each variant column group uses its own pair-specific "
+                 "intersection, so baseline values differ across groups.")
     L.append("")
 
-    for v in runs[1:]:
+    pair_data = []
+    for v in variants:
         ids = pair_comparable_ids(per_prompt, ordered_ids,
                                   baseline["label"], v["label"])
-        L.append(f"### {baseline['label']} vs {v['label']}")
-        L.append("")
-        L.append(f"- Comparable prompt IDs: "
-                 f"`{', '.join(ids) if ids else '(none)'}` (count: {len(ids)})")
-        L.append("")
-        if not ids:
-            L.append("_No comparable prompts; metrics suppressed._")
-            L.append("")
-            continue
+        pair_data.append({
+            "v": v,
+            "ids": ids,
+            "b_metrics": comparable_metrics(per_prompt, baseline["label"], ids),
+            "v_metrics": comparable_metrics(per_prompt, v["label"], ids),
+        })
 
-        b_metrics = comparable_metrics(per_prompt, baseline["label"], ids)
-        v_metrics = comparable_metrics(per_prompt, v["label"],        ids)
+    for d in pair_data:
+        ids_str = ", ".join(d["ids"]) if d["ids"] else "(none)"
+        if multi:
+            L.append(f"- {baseline['label']} ∩ {d['v']['label']}: "
+                     f"n={len(d['ids'])}, IDs `{ids_str}`")
+        else:
+            L.append(f"- Comparable prompt IDs: `{ids_str}` (count: {len(d['ids'])})")
+    L.append("")
 
-        L.append(f"| Metric | {baseline['label']} | {v['label']} | "
-                 f"Δ ({v['label']} − {baseline['label']}) |")
-        L.append("|:-------|---:|---:|---:|")
-        for label, key, kind in COMPARABLE_ROWS:
-            b_val = b_metrics.get(key)
-            v_val = v_metrics.get(key)
-            b_cell = _fmt_comparable(b_val, kind)
-            v_cell = _fmt_comparable(v_val, kind)
+    if not any(d["ids"] for d in pair_data):
+        L.append("_No comparable prompts; metrics suppressed._")
+        L.append("")
+        return
+
+    headers = ["Metric"]
+    aligns  = [":-------"]
+    for d in pair_data:
+        suffix = f" ({d['v']['label']} pair)" if multi else ""
+        headers.append(f"{baseline['label']}{suffix}")
+        headers.append(d["v"]["label"])
+        headers.append(f"Δ ({d['v']['label']} − {baseline['label']})")
+        aligns.extend(["---:", "---:", "---:"])
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
+
+    for label, key, kind in COMPARABLE_ROWS:
+        cells = [label]
+        for d in pair_data:
+            if not d["ids"]:
+                cells.extend(["—", "—", "—"])
+                continue
+            b_val = d["b_metrics"].get(key)
+            v_val = d["v_metrics"].get(key)
+            cells.append(_fmt_comparable(b_val, kind))
+            cells.append(_fmt_comparable(v_val, kind))
             if b_val is None or v_val is None:
-                d_cell = "—"
+                cells.append("—")
             elif kind == "int":
-                d_cell = fmt_delta_int(v_val - b_val)
+                cells.append(fmt_delta_int(v_val - b_val))
             elif kind == "float1":
-                d_cell = fmt_delta_float(v_val - b_val, 1)
+                cells.append(fmt_delta_float(v_val - b_val, 1))
             else:
-                d_cell = fmt_delta_float(v_val - b_val, 2)
-            L.append(f"| {label} | {b_cell} | {v_cell} | {d_cell} |")
-        L.append("")
+                cells.append(fmt_delta_float(v_val - b_val, 2))
+        L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 def render_pairwise_verdicts(L, runs, totals_by_label, per_prompt, ordered_ids):
-    """One sub-table per variant; rows = metrics, columns = baseline + variant.
-    The winning stack's cell shows the margin; the other shows a dash."""
+    """Single combined table. Rows = metrics, columns = each variant. Each cell
+    encodes the pair winner: `✓` if the variant beats baseline, `base` if the
+    baseline beats the variant, `Tie` otherwise — followed by the margin."""
     baseline = runs[0]
+    variants = runs[1:]
     b_totals = totals_by_label[baseline["label"]]
+
     L.append("## Pairwise verdicts (each variant vs baseline)")
     L.append("")
     L.append(f"Baseline: **{baseline['label']}**. Speed / token / context margins "
-             "use the per-pair comparable subset (both stacks PASS).")
+             "use the per-pair comparable subset (both stacks PASS). Cells show the "
+             "winner: `✓` = variant wins, `base` = baseline wins.")
     L.append("")
 
-    variants = runs[1:]
-    multi = len(variants) > 1
-
-    def cells(winner_label, b_label, v_label, attr_str):
-        if winner_label == "Tie":
-            return "Tie", "Tie"
-        if winner_label == b_label:
-            return attr_str, "—"
-        if winner_label == v_label:
-            return "—", attr_str
-        return "—", "—"
-
-    for r in variants:
-        v_totals = totals_by_label[r["label"]]
+    verdicts = {}
+    for v in variants:
         ids = pair_comparable_ids(per_prompt, ordered_ids,
-                                  baseline["label"], r["label"])
+                                  baseline["label"], v["label"])
         b_metrics = comparable_metrics(per_prompt, baseline["label"], ids)
-        v_metrics = comparable_metrics(per_prompt, r["label"],        ids)
+        v_metrics = comparable_metrics(per_prompt, v["label"],        ids)
         b_for_pair = {**b_totals, **b_metrics}
-        v_for_pair = {**v_totals, **v_metrics}
-        verd = pairwise_verdict(b_for_pair, v_for_pair,
-                                baseline["label"], r["label"])
+        v_for_pair = {**totals_by_label[v["label"]], **v_metrics}
+        verdicts[v["label"]] = pairwise_verdict(b_for_pair, v_for_pair,
+                                                baseline["label"], v["label"])
 
-        if multi:
-            L.append(f"### {r['label']}")
-            L.append("")
-        L.append(f"| Metric | {baseline['label']} | {r['label']} |")
-        L.append("|:-------|:---:|:---:|")
+    def cell(winner_label, v_label, margin_str, win_glyph="✓"):
+        if winner_label == "Tie":
+            return "Tie"
+        if winner_label == v_label:
+            return f"{win_glyph} {margin_str}".rstrip()
+        if winner_label == baseline["label"]:
+            return f"base {margin_str}".rstrip()
+        return "—"
 
-        b_c, v_c = cells(verd["accuracy_winner"], baseline["label"], r["label"],
-                         f"+{fmt_float(verd['accuracy_margin_pp'], 1)} pp")
-        L.append(f"| Accuracy | {b_c} | {v_c} |")
+    headers = ["Metric"] + [v["label"] for v in variants]
+    aligns  = [":-------"] + [":---:"] * len(variants)
+    L.append("| " + " | ".join(headers) + " |")
+    L.append("|" + "|".join(aligns) + "|")
 
-        b_c, v_c = cells(verd["speed_winner"], baseline["label"], r["label"],
-                         f"+{fmt_float(verd['speed_margin_pct'], 1)}%")
-        L.append(f"| Speed | {b_c} | {v_c} |")
+    metric_rows = (
+        ("Accuracy",     "accuracy_winner",
+            lambda d: f"+{fmt_float(d['accuracy_margin_pp'], 1)} pp"),
+        ("Speed",        "speed_winner",
+            lambda d: f"+{fmt_float(d['speed_margin_pct'], 1)}%"),
+        ("Tokens",       "tokens_winner",
+            lambda d: f"+{fmt_float(d['tokens_margin_pct'], 1)}%"),
+        ("Peak context", "peak_context_winner",
+            lambda d: f"+{fmt_float(d['peak_context_margin_pct'], 1)}%"),
+        ("Tool reliability", "tool_reliability_winner", lambda d: ""),
+    )
+    for label, winner_key, margin_fn in metric_rows:
+        cells = [label]
+        for v in variants:
+            d = verdicts[v["label"]]
+            cells.append(cell(d[winner_key], v["label"], margin_fn(d)))
+        L.append("| " + " | ".join(cells) + " |")
 
-        b_c, v_c = cells(verd["tokens_winner"], baseline["label"], r["label"],
-                         f"+{fmt_float(verd['tokens_margin_pct'], 1)}%")
-        L.append(f"| Tokens | {b_c} | {v_c} |")
-
-        b_c, v_c = cells(verd["peak_context_winner"], baseline["label"], r["label"],
-                         f"+{fmt_float(verd['peak_context_margin_pct'], 1)}%")
-        L.append(f"| Peak context | {b_c} | {v_c} |")
-
-        b_c, v_c = cells(verd["tool_reliability_winner"], baseline["label"], r["label"], "✓")
-        L.append(f"| Tool reliability | {b_c} | {v_c} |")
-
-        b_c, v_c = cells(verd["winner"], baseline["label"], r["label"], "**✓**")
-        L.append(f"| **Overall winner** | {b_c} | {v_c} |")
-        L.append("")
+    cells = ["**Overall winner**"]
+    for v in variants:
+        d = verdicts[v["label"]]
+        if d["winner"] == "Tie":
+            cells.append("**Tie**")
+        elif d["winner"] == v["label"]:
+            cells.append("**✓**")
+        elif d["winner"] == baseline["label"]:
+            cells.append("**base**")
+        else:
+            cells.append("—")
+    L.append("| " + " | ".join(cells) + " |")
+    L.append("")
 
 
 # ---------------------------------------------------------------------------

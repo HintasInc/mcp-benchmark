@@ -1,0 +1,1237 @@
+{
+  "timestamp": "20260429_204604__hintas__topk10_batch-off_max5_rag-off",
+  "stacks": [
+    "hintas"
+  ],
+  "per_prompt": {
+    "1": {
+      "title": "List public channels with counts",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent correctly listed all 13 public non-archived channels with IDs and member counts via conversations_list pagination.",
+        "noteworthy_paths": [
+          "call_tool_chain initial attempt returned {success:true,logs:[]} \u2014 agent recovered by adding explicit return statement"
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 1126,
+        "wall_clock_s": 24.88
+      }
+    },
+    "2": {
+      "title": "Members of #design-reviews",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved the 3 members of #design-reviews (rhea, miranda, devon) using conversations_members + users_info.",
+        "noteworthy_paths": [
+          "first users_info call failed with 'Cannot read properties of undefined' \u2014 agent recovered with error handling and console.log debug approach"
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 1343,
+        "wall_clock_s": 37.66
+      }
+    },
+    "3": {
+      "title": "Post hello in #random",
+      "difficulty": "L1",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent posted a hello message to #random via chat_postMessage after resolving the channel ID.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 264,
+        "wall_clock_s": 13.09
+      }
+    },
+    "4": {
+      "title": "Jared's profile card",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent returned Jared's display name, real name, email, title, and timezone from users_info lookup by display name.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 949,
+        "wall_clock_s": 25.13
+      }
+    },
+    "5": {
+      "title": "Recent #announcements (oldest-first)",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched recent #announcements messages via conversations_history and presented them in oldest-first order as requested.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 2102,
+        "wall_clock_s": 44.05
+      }
+    },
+    "7": {
+      "title": "Update #eng-backend topic",
+      "difficulty": "L1",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent set the #eng-backend channel topic using conversations_setTopic after resolving the channel ID.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 371,
+        "wall_clock_s": 18.26
+      }
+    },
+    "8": {
+      "title": "Thumbs-up latest posted msg in #marketing",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched the latest message in #marketing via conversations_history and added a thumbs-up reaction via reactions_add.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 704,
+        "wall_clock_s": 21.51
+      }
+    },
+    "10": {
+      "title": "My DND state",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved the authenticated user's DND status via dnd_info and correctly reported the active snooze state.",
+        "noteworthy_paths": [
+          "used dnd_info with no user param to get self DND status; high token count (2897) relative to task complexity"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 2897,
+        "wall_clock_s": 56.67
+      }
+    },
+    "11": {
+      "title": "Find Jared by email",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent looked up Jared by email via users_lookupByEmail and returned the matching user profile.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 23,
+        "total_tokens": 1097,
+        "wall_clock_s": 43.52
+      }
+    },
+    "13": {
+      "title": "Ping QA team in #qa-bugs",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved the QA usergroup members via usergroups_users_list and mentioned all members in #qa-bugs with chat_postMessage.",
+        "noteworthy_paths": [
+          "peak_context=1255 indicates large tool result from usergroup member listing"
+        ],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 1255,
+        "total_tokens": 1999,
+        "wall_clock_s": 51.79
+      }
+    },
+    "14": {
+      "title": "Engineering team roster",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved the Engineering usergroup roster via usergroups_users_list and enriched with users_info display names.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 1506,
+        "wall_clock_s": 59.08
+      }
+    },
+    "15": {
+      "title": "DM Pinkman for a call",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent opened a DM channel with Pinkman via conversations_open and sent the call-request message via chat_postMessage.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 8,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 26,
+        "total_tokens": 1423,
+        "wall_clock_s": 51.05
+      }
+    },
+    "17": {
+      "title": "Schedule Monday kickoff",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Slack API rejected the request with time_in_past error. The benchmark anchor is 2026-04-19 but the run occurred 2026-04-29; 'next Monday' (2026-04-20) was already 9 days in the past. No scheduled message was created \u2014 capability gap due to temporal mismatch between anchor and run date.",
+        "noteworthy_paths": [
+          "time_in_past API error \u2014 benchmark anchor vs run-date mismatch makes scheduling prompts fail for past-relative days"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 1055,
+        "wall_clock_s": 32.4
+      }
+    },
+    "20": {
+      "title": "Permalink to the alpha-ship announcement",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent searched #announcements for the alpha-ship message and returned its permalink via chat_getPermalink.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 27,
+        "total_tokens": 2145,
+        "wall_clock_s": 49.68
+      }
+    },
+    "21": {
+      "title": "Post, then edit a typo (chat.update)",
+      "difficulty": "L2",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent posted a message with an intentional typo to #general, then corrected it using chat_update with the fixed text.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 445,
+        "wall_clock_s": 21.79
+      }
+    },
+    "22": {
+      "title": "Spin up #gold-master-feedback",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Channel #gold-master-feedback already existed in archived state; agent unarchived it rather than creating a new channel. Topic, invites (Jared, Pinkman, Lagoon), and welcome message were all completed correctly. The 'create new channel' aspect of the prompt intent is not satisfied \u2014 the existing channel was repurposed instead.",
+        "noteworthy_paths": [
+          "channel pre-existed in archived state; agent chose conversations_unarchive path rather than failing or creating duplicate"
+        ],
+        "tool_calls": {
+          "complete": 19,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 1258,
+        "total_tokens": 4842,
+        "wall_clock_s": 99.4
+      }
+    },
+    "23": {
+      "title": "BUG-### digest in #qa-bugs",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent searched #qa-bugs for BUG-### pattern messages, summarized the open bugs, and posted the digest to the channel.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 23,
+        "total_tokens": 3323,
+        "wall_clock_s": 58.5
+      }
+    },
+    "24": {
+      "title": "Lisbon offsite RSVP tally",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent found all 3 thread replies under the Lisbon offsite post but all share user ID U0AU46LC6F8 (Miranda) \u2014 a demo workspace seeding limitation. Agent semantically inferred 2 yes / 1 no from message text but could not produce a multi-person attribution breakdown. Intent partially achieved: tally count is correct but per-person attribution is impossible via the API.",
+        "noteworthy_paths": [
+          "all 3 thread replies share same user ID in API \u2014 demo workspace seeding artifact; agent correctly flagged this in result"
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 35,
+        "total_tokens": 3843,
+        "wall_clock_s": 89.1
+      }
+    },
+    "26": {
+      "title": "Rename #eng-frontend \u2192 #eng-client",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent renamed #eng-frontend to #eng-client via conversations_rename after resolving the channel ID.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 872,
+        "wall_clock_s": 34.72
+      }
+    },
+    "27": {
+      "title": "Revive #old-playtest-2025",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent unarchived #old-playtest-2025 via conversations_unarchive, restoring the channel to active state.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 9,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 29,
+        "total_tokens": 1681,
+        "wall_clock_s": 67.6
+      }
+    },
+    "28": {
+      "title": "Leads presence + DND snapshot",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved presence (users_getPresence) and DND status (dnd_info) for all leads and returned a combined snapshot table.",
+        "noteworthy_paths": [
+          "peak_context=749 from presence/DND batch lookups"
+        ],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 749,
+        "total_tokens": 2192,
+        "wall_clock_s": 45.84
+      }
+    },
+    "29": {
+      "title": "Private channels I can see",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent listed private channels visible to the authenticated user via conversations_list with types=private_channel.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 1229,
+        "wall_clock_s": 36.78
+      }
+    },
+    "30": {
+      "title": "Remove a stale reaction (reactions.remove)",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent located the target message, identified the existing stale reaction, and removed it via reactions_remove.",
+        "noteworthy_paths": [
+          "highest wall_clock_s for non-timeout (114.78s) \u2014 11 tool calls to locate, confirm, and remove reaction"
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 30,
+        "total_tokens": 3804,
+        "wall_clock_s": 114.78
+      }
+    },
+    "31": {
+      "title": "ci-bot activity in #incidents",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent retrieved all ci-bot messages in #incidents by filtering conversations_history by the bot's user ID.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 10,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 33,
+        "total_tokens": 2566,
+        "wall_clock_s": 61.92
+      }
+    },
+    "32": {
+      "title": "#launch-2026 posting check",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent checked whether #launch-2026 exists, whether the user is a member, and whether posting restrictions apply \u2014 correctly determined posting is allowed.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 35,
+        "total_tokens": 3643,
+        "wall_clock_s": 75.67
+      }
+    },
+    "33": {
+      "title": "Tomb-3 concept files",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Agent found the message referencing 'Tomb-level 3 concept pass' in #design-reviews but the Slack API returned no file attachment metadata. A global files_list scan across the workspace also returned zero files. The demo workspace has no stored file metadata \u2014 required output cannot be produced.",
+        "noteworthy_paths": [
+          "files_list workspace scan returned zero files \u2014 confirms missing file metadata is environment-wide, not channel-specific"
+        ],
+        "tool_calls": {
+          "complete": 16,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 44,
+        "total_tokens": 5796,
+        "wall_clock_s": 141.21
+      }
+    },
+    "34": {
+      "title": "Leads MPIM message",
+      "difficulty": "L3",
+      "category": "write",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent opened an MPIM group conversation with all leads via conversations_open and sent the group message via chat_postMessage.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 744,
+        "wall_clock_s": 19.93
+      }
+    },
+    "35": {
+      "title": "Kick Rhea; re-invite Ember",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent removed Rhea from #design-reviews via conversations_kick and re-invited Ember via conversations_invite.",
+        "noteworthy_paths": [
+          "peak_context=4312 \u2014 large context from member/channel enumeration during kick+invite workflow"
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 4312,
+        "total_tokens": 3327,
+        "wall_clock_s": 37.22
+      }
+    },
+    "36": {
+      "title": "Spin up incident war room",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent created the incident war room channel, set the topic, invited relevant users, and posted the opening message. The date used (2026-04-29) reflects the actual run date per the prompt's 'today' instruction \u2014 drift only.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 2638,
+        "wall_clock_s": 88.69
+      }
+    },
+    "37": {
+      "title": "DM every lead individually",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent opened individual DM channels with each lead via conversations_open and sent personalized messages to each via chat_postMessage.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 1821,
+        "wall_clock_s": 44.11
+      }
+    },
+    "38": {
+      "title": "BUG-247 amplification",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found BUG-247 in #qa-bugs, cross-posted it to #incidents with attribution, and confirmed delivery.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 2528,
+        "wall_clock_s": 50.1
+      }
+    },
+    "39": {
+      "title": "Low-membership audit (ephemeral)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent audited all public channels for low membership, identified the qualifying channels, and posted the ephemeral audit report.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 1280,
+        "wall_clock_s": 29.95
+      }
+    },
+    "40": {
+      "title": "My first post in #general",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent paginated through #general history oldest-first to find the authenticated user's earliest message and returned it.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 2655,
+        "wall_clock_s": 58.04
+      }
+    },
+    "42": {
+      "title": "Top 5 reacted in #announcements",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched all messages from #announcements, tallied reaction counts, and returned the top 5 most-reacted messages with counts.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 2669,
+        "wall_clock_s": 52.45
+      }
+    },
+    "43": {
+      "title": "QA posting leaderboard + staleness DM",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent computed the posting leaderboard for #qa-bugs by counting per-user messages, identified the least-active poster, and sent them a staleness DM.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 3453,
+        "wall_clock_s": 80.78
+      }
+    },
+    "44": {
+      "title": "Self-reschedule: cancel and re-create a scheduled message",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent listed scheduled messages, cancelled the existing one via chat_deleteScheduledMessage, and re-created it with the updated time via chat_scheduleMessage.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 4826,
+        "wall_clock_s": 80.5
+      }
+    },
+    "45": {
+      "title": "Mark all my conversations as read",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "ERROR",
+        "reasoning": "Timed out after 300s with no tool calls completed. Infrastructure timeout before any work could begin.",
+        "noteworthy_paths": [
+          "zero tool calls before timeout \u2014 agent never started; possible initialization failure or immediate deadlock"
+        ],
+        "tool_calls": {
+          "complete": 0,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [],
+        "initial_context": 0,
+        "peak_context": 0,
+        "total_tokens": 0,
+        "wall_clock_s": 300.03
+      }
+    },
+    "46": {
+      "title": "All image attachments in #design-reviews",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "FAIL",
+        "reasoning": "Agent exhaustively searched #design-reviews history and ran a workspace-wide files_list; no file attachment metadata exists in the demo workspace. The channel has 3 messages but zero files surfaced by the API. Required output (image attachment list) cannot be produced.",
+        "noteworthy_paths": [
+          "workspace-wide files_list confirms no file metadata exists in demo environment"
+        ],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 28,
+        "total_tokens": 3326,
+        "wall_clock_s": 74.56
+      }
+    },
+    "47": {
+      "title": "Leadership digest",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "ERROR",
+        "reasoning": "Timed out after 300s with no tool calls completed. Infrastructure timeout before any work could begin.",
+        "noteworthy_paths": [
+          "zero tool calls before timeout \u2014 same pattern as P45; multi-channel digest may trigger a planning loop before execution"
+        ],
+        "tool_calls": {
+          "complete": 0,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [],
+        "initial_context": 0,
+        "peak_context": 0,
+        "total_tokens": 0,
+        "wall_clock_s": 300.02
+      }
+    },
+    "48": {
+      "title": "DM Pinkman, respecting DND snooze",
+      "difficulty": "L4",
+      "category": "edge_case",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent checked Pinkman's DND status, confirmed the snooze window, and sent the DM with appropriate context acknowledging the quiet period.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 1344,
+        "wall_clock_s": 40.72
+      }
+    },
+    "49": {
+      "title": "Set, list, then delete a personal reminder",
+      "difficulty": "L3",
+      "category": "workflow",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent set a personal reminder via reminders_add, listed active reminders via reminders_list to confirm creation, then deleted it via reminders_delete.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 25,
+        "total_tokens": 3452,
+        "wall_clock_s": 76.84
+      }
+    },
+    "52": {
+      "title": "Find Pinkman's full name & channels (via fallback enumeration)",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent enumerated all workspace users via users_list, matched Pinkman by display name, retrieved the full profile, and identified all channels containing Pinkman via conversations_list membership checks.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 14,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 39,
+        "total_tokens": 5283,
+        "wall_clock_s": 80.6
+      }
+    },
+    "53": {
+      "title": "Search MY DM with Jared for 'pacing'",
+      "difficulty": "L3",
+      "category": "search",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent opened the DM with Jared via conversations_open, fetched the DM history, and returned messages containing 'pacing'.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 1891,
+        "wall_clock_s": 46.29
+      }
+    },
+    "54": {
+      "title": "Alpha-ship reaction math + cross-ref (history-scoped)",
+      "difficulty": "L4",
+      "category": "search",
+      "hintas": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent found the alpha-ship message and reported reaction total as 2 (live workspace count) vs benchmark-seeded expectation of 6 \u2014 workspace drift. The cross-reference channel count returned 0 vs expected 1 due to a time-window filter that excluded the seeded message. Reaction summary is present but counts diverge from seeded state; cross-ref miss is a filtering issue rather than pure drift.",
+        "noteworthy_paths": [
+          "reaction count discrepancy (2 live vs 6 seeded) is workspace drift; cross-ref miss (0 vs 1) is a time-filter issue"
+        ],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 24,
+        "total_tokens": 3261,
+        "wall_clock_s": 66.32
+      }
+    },
+    "55": {
+      "title": "Close out tile-loader thread",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent found the tile-loader thread in #incidents, posted a closing summary as a thread reply, and marked the thread as resolved.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 8,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 31,
+        "total_tokens": 2180,
+        "wall_clock_s": 57.43
+      }
+    },
+    "56": {
+      "title": "Quiet-until-Monday self-DND + announce + schedule lift",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent set DND via dnd_setSnooze, announced the quiet period in the appropriate channel, and scheduled the lift. Timestamps reflect actual run date (2026-04-29) vs benchmark anchor \u2014 drift only, prompt said 'until Monday'.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 19,
+        "total_tokens": 3989,
+        "wall_clock_s": 73.36
+      }
+    },
+    "58": {
+      "title": "ci-bot silence audit across channels",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent audited ci-bot message activity across all relevant channels, identified silence periods and active periods, and produced a multi-channel report.",
+        "noteworthy_paths": [
+          "highest token count for non-error prompt (6090); 197.45s wall clock for cross-channel audit"
+        ],
+        "tool_calls": {
+          "complete": 12,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 34,
+        "total_tokens": 6090,
+        "wall_clock_s": 197.45
+      }
+    },
+    "60": {
+      "title": "End-to-end code-freeze orchestration",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "hintas": {
+        "verdict": "PASS",
+        "reasoning": "Agent executed full code-freeze orchestration: updated channel topics, posted the freeze announcement, DM'd leads, and completed all required coordination steps.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "search_tools",
+          "call_tool_chain"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 5297,
+        "wall_clock_s": 96.02
+      }
+    }
+  },
+  "aggregates": {
+    "hintas": {
+      "n": 48,
+      "pass": 40,
+      "partial": 3,
+      "fail": 3,
+      "error": 2,
+      "success_rate": 0.8333333333333334,
+      "avg_initial_context": 2.875,
+      "avg_peak_context": 177.1875,
+      "avg_wall_clock_s": 69.32270833333334,
+      "total_tokens": 115271,
+      "avg_tool_calls": 6.125,
+      "total_tool_failures": 0
+    }
+  },
+  "breakdowns": {
+    "by_difficulty": {
+      "L1": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      },
+      "L2": {
+        "n": 10,
+        "success_rate": 0.9,
+        "partial": 0,
+        "fail": 1,
+        "error": 0
+      },
+      "L3": {
+        "n": 17,
+        "success_rate": 0.8823529411764706,
+        "partial": 1,
+        "fail": 1,
+        "error": 0
+      },
+      "L4": {
+        "n": 15,
+        "success_rate": 0.6666666666666666,
+        "partial": 2,
+        "fail": 1,
+        "error": 2
+      },
+      "L5": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      }
+    },
+    "by_category": {
+      "retrieval": {
+        "n": 11,
+        "success_rate": 0.9090909090909091,
+        "partial": 0,
+        "fail": 1,
+        "error": 0
+      },
+      "search": {
+        "n": 9,
+        "success_rate": 0.6666666666666666,
+        "partial": 2,
+        "fail": 1,
+        "error": 0
+      },
+      "write": {
+        "n": 9,
+        "success_rate": 0.8888888888888888,
+        "partial": 0,
+        "fail": 1,
+        "error": 0
+      },
+      "workflow": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      },
+      "orchestration": {
+        "n": 13,
+        "success_rate": 0.7692307692307693,
+        "partial": 1,
+        "fail": 0,
+        "error": 2
+      },
+      "edge_case": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      }
+    }
+  }
+}
