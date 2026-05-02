@@ -1,0 +1,74 @@
+{
+  "U01MIRANDA": {
+    "id": "U01MIRANDA",
+    "email": "miranda@hintas.co",
+    "name": "Miranda Okonkwo",
+    "handle": "miranda",
+    "display_name": "Miranda",
+    "benchmark-author": true
+  },
+  "U02JARED": {
+    "id": "U02JARED",
+    "email": "jared@hintas.co",
+    "name": "Jared Blackwood",
+    "handle": "jared",
+    "display_name": "Jared",
+    "benchmark-author": false
+  },
+  "U03PINKMAN": {
+    "id": "U03PINKMAN",
+    "email": "pinkman@hintas.co",
+    "name": "Saul Rivera",
+    "handle": "pinkman",
+    "display_name": "Pinkman",
+    "benchmark-author": false
+  },
+  "U04LAGOON": {
+    "id": "U04LAGOON",
+    "email": "lagoon@hintas.co",
+    "name": "Lagoon Takahashi",
+    "handle": "lagoon",
+    "display_name": "Lagoon",
+    "benchmark-author": false
+  },
+  "U05CLAUDE": {
+    "id": "U05CLAUDE",
+    "email": "claude@hintas.co",
+    "name": "Claude Ellison",
+    "handle": "claude",
+    "display_name": "Claude",
+    "benchmark-author": false
+  },
+  "U06DEVON": {
+    "id": "U06DEVON",
+    "email": "devon@hintas.co",
+    "name": "Devon Park",
+    "handle": "devon",
+    "display_name": "Devon",
+    "benchmark-author": false
+  },
+  "U07RHEA": {
+    "id": "U07RHEA",
+    "email": "rhea@hintas.co",
+    "name": "Rhea Kapoor",
+    "handle": "rhea",
+    "display_name": "Rhea",
+    "benchmark-author": false
+  },
+  "U08TOMAS": {
+    "id": "U08TOMAS",
+    "email": "tomas@hintas.co",
+    "name": "Tomás Vidal",
+    "handle": "tomas",
+    "display_name": "Tomás",
+    "benchmark-author": false
+  },
+  "U09EMBER": {
+    "id": "U09EMBER",
+    "email": "ember@hintas.co",
+    "name": "Ember Shah",
+    "handle": "ember",
+    "display_name": "Ember",
+    "benchmark-author": false
+  }
+}

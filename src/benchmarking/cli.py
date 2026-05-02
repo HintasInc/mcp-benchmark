@@ -144,16 +144,6 @@ def run_with_token(script: Path, token: str, token_env: str, label: str,
     return proc.returncode
 
 
-def _state_file_args(platform: Platform, stack: Stack) -> list[str]:
-    path = platform.state_file_for(stack)
-    return ["--state-file", str(path)] if path else []
-
-
-def _prereq_file_args(platform: Platform, stack: Stack) -> list[str]:
-    path = platform.prereq_file_for(stack)
-    return ["--prereq-file", str(path)] if path else []
-
-
 def phase_reset(args: argparse.Namespace, platform: Platform, stack: Stack) -> None:
     section(f"Phase 1 — Resetting {stack.display_name} workspace")
     if args.dry_run:
@@ -162,7 +152,7 @@ def phase_reset(args: argparse.Namespace, platform: Platform, stack: Stack) -> N
     rc = run_with_token(
         platform.reset_script, token_for(stack),
         platform.downstream_token_env, f"{stack.name} reset",
-        ["--allow-missing-state", *_state_file_args(platform, stack)],
+        ["--allow-missing-state", "--stack", stack.name],
     )
     if rc != 0:
         print("ERROR: reset phase failed — aborting", file=sys.stderr)
@@ -177,7 +167,7 @@ def phase_seed(args: argparse.Namespace, platform: Platform, stack: Stack) -> No
     rc = run_with_token(
         platform.seed_script, token_for(stack),
         platform.downstream_token_env, f"{stack.name} seed",
-        [*_state_file_args(platform, stack), *_prereq_file_args(platform, stack)],
+        ["--stack", stack.name],
     )
     if rc != 0:
         print("ERROR: seed phase failed — aborting", file=sys.stderr)

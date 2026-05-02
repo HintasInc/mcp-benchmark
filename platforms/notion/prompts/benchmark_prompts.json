@@ -1,0 +1,1042 @@
+{
+  "benchmark": "Hintas Notion Capability Benchmark",
+  "version": "v1",
+  "ground_truth_reference": "workspace_state.md",
+  "workspace_plan": "plus",
+  "comparison_goal": "Compare OpenAPI-direct execution vs MCP-mediated execution of the Notion API across matched prompts. Each prompt is replayed on both stacks; the same success_criteria apply. Difficulty (L1→L5) and explicit cross-entity orchestration (databases × pages × blocks × comments × mentions) are designed to surface differences in tool discovery, parameter formation, pagination, partial-failure handling, and access-boundary handling between the two stacks.",
+  "agent_identity": {
+    "acts_as": "U10AGENT",
+    "display_name": "Hintas Agent",
+    "role": "Internal Notion integration (bot user). Cannot impersonate human users. Owner is {{NAME_U01MIRANDA}} ({{ID_U01MIRANDA}}).",
+    "token_class": "Internal-integration token (single token, no OAuth flow). Capabilities are configured at integration-creation time and cannot be expanded mid-run.",
+    "notes": "The agent is structurally a bot user and is the author of any content it creates during a prompt. Pre-seeded content is authored by humans ({{NAME_U01MIRANDA}}, {{NAME_U02JARED}}, ...); the agent does NOT appear in seeded created_by fields."
+  },
+  "granted_capabilities": [
+    "read_content",
+    "update_content",
+    "insert_content",
+    "read_user_info",
+    "read_comments",
+    "insert_comments"
+  ],
+  "extension_capabilities": {
+    "read_user_with_email": "Adds email visibility on user objects. Required for prompts that look up users by email or that must return person.email values."
+  },
+  "unavailable_via_api": {
+    "user_provisioning": "Notion does not expose user invite / removal / role-change endpoints. Workspace membership is managed in the Notion settings UI only.",
+    "workspace_billing_and_plan": "Plan upgrades, downgrades, and billing settings are not exposed via the public API.",
+    "integration_management": "Creating, updating, or revoking integration tokens is not exposed via the public API.",
+    "view_config": "Database views (table, board, calendar, gallery, list) cannot be created or modified via the public API. Only the underlying schema and rows are addressable."
+  },
+  "setup_instructions": [
+    "STEP 1 — Provision a fresh Notion Plus workspace named 'Hintas'. Do NOT run against production — prompts create, archive, restore, rename, mutate, and comment on pages, databases, and blocks.",
+    "STEP 2 — Seed users, page hierarchy, databases (with rows), block trees, mentions, comments, and archived state exactly as described in workspace_state.md (v1). Anchor wall-clock: benchmark_now = 2026-04-19T10:00:00-07:00. All seeded Date/Filed/Embargo/Due property values are computed as offsets from this anchor; created_time / last_edited_time on the Notion side may carry real seed-time wall-clock and are not graded against benchmark_now directly.",
+    "STEP 3 — Create an internal integration named 'Hintas Agent' with the capabilities listed in granted_capabilities. If you are also running extension prompts, additionally enable the read_user_with_email capability.",
+    "STEP 4 — Share the integration to: P01_HINTAS_ROOT (and inherit to descendants), DB_BUGS, DB_TASKS, DB_MEETING_NOTES, DB_PROJECTS. Do NOT share to: P08_LEADS_ONLY (and its child P11_LEADS_NOTES) or DB_PRESS_CONTACTS. Verify the unshared targets return 404 before running the benchmark.",
+    "STEP 5 — Wire the agent-under-test to (a) a Notion MCP server authenticated with the integration token and (b) a raw OpenAPI stack authenticated with the same token. Both stacks must see the same capability set. Run every prompt against both stacks to produce the comparison.",
+    "STEP 6 — Reset the workspace to the exact v1 snapshot before every single prompt run. Many prompts mutate state; do not chain prompts.",
+    "STEP 7 — For each (prompt × stack) cell, record: (a) success = ALL success_criteria met, (b) wall-clock seconds, (c) number of tool / HTTP calls, (d) input-token usage, (e) output-token usage, (f) number of clarifying questions the agent asked (should be 0 for most), (g) whether the agent respected access-boundary and validation expectations.",
+    "STEP 8 — Date-resolution contract: the agent MUST resolve 'today' / 'tomorrow' / 'this week' / 'next 14 days' / other relative-time expressions against benchmark_now (2026-04-19), NOT the host wall clock. Otherwise prompts 16, 17, 41, 44, 45, 50 will drift.",
+    "STEP 9 — Naming contract: prompts refer to people by first name, pages and databases by their human-readable title, and database rows by their primary title-property value. Agents resolve names → IDs via listUsers, search, and queryDatabase as appropriate."
+  ],
+  "global_assumptions": [
+    "Workspace: 'Hintas' on Notion's Plus plan. Notion-API version 2022-06-28.",
+    "Agent identity: an internal integration named 'Hintas Agent' (bot user U10AGENT). The agent cannot impersonate humans.",
+    "People referenced by first name: {{NAME_U01MIRANDA}} Okonkwo, {{NAME_U02JARED}} Blackwood, Saul Rivera (display '{{NAME_U03PINKMAN}}'), {{NAME_U04LAGOON}} Takahashi, {{NAME_U06DEVON}} Park, {{NAME_U07RHEA}} Kapoor, {{NAME_U08TOMAS}} Vidal, {{NAME_U05CLAUDE}} Ellison, {{NAME_U09EMBER}} Shah (revoked).",
+    "Timezone for relative time expressions: America/Los_Angeles.",
+    "Benchmark wall-clock anchor: 2026-04-19T10:00:00-07:00 (Sunday).",
+    "Pages and databases are integration-scoped: search and queryDatabase only return entities shared to the integration. P08_LEADS_ONLY and DB_PRESS_CONTACTS are deliberately unshared.",
+    "Database queries paginate via start_cursor/next_cursor; max page_size is 100. retrieveBlockChildren has the same pagination model.",
+    "Property names in updatePage and queryDatabase filters are case-sensitive.",
+    "appendBlockChildren accepts up to 100 children and 2 levels of nesting per call.",
+    "If a required operation is unsupported by the wired-up stack (MCP missing coverage, capability not granted, or non-shared target), the agent must report the failure cleanly rather than fabricate results."
+  ],
+  "difficulty_rubric": {
+    "L1": "1–2 API calls, no conditional logic, no disambiguation. ≤ 30s.",
+    "L2": "3–5 calls with a simple lookup or filter. ≤ 60s.",
+    "L3": "3–5 calls across multiple entities OR a simple multi-step write with one filter. ≤ 90s.",
+    "L4": "6+ calls with aggregation, conditionals, or fan-out. ≤ 3 min.",
+    "L5": "Complex orchestration: partial-failure handling, multi-axis reasoning (databases × pages × blocks × comments × mentions × time), or ambiguous target resolution."
+  },
+  "feasibility_tags": {
+    "core": "Runnable with the capabilities in granted_capabilities only.",
+    "extension": "Runnable if the operator additionally enables read_user_with_email on the integration. Skip in core runs.",
+    "infeasible": "Not exposed by the Notion public API regardless of capability (user provisioning, billing, integration management, view config). Documented for traceability."
+  },
+  "grading_notes_global": [
+    "Prompts that depend on paginated queryDatabase or retrieveBlockChildren count total tool calls separately from the success criterion; success should not be failed due to pagination count alone unless the prompt specifies an exact call count.",
+    "'Clean failure reporting' means the agent names the failing step, explains WHY (404 / object_not_found / validation_error / archived / capability missing), and does not mutate downstream state silently.",
+    "Property-name comparisons in success_criteria are case-sensitive against the seeded schema in workspace_state.md.",
+    "Date filter equivalence: 'on or after 2026-04-19' is checked using on_or_after; 'in the next 14 days' is [benchmark_now, benchmark_now + 14d]; the agent may use either equivalent filter form.",
+    "Mention assertions: a 'mention.user for {{NAME_U01MIRANDA}}' requires the rich_text contain a segment with type='mention', mention.type='user', mention.user.id matching {{ID_U01MIRANDA}}'s user_id. Plain-text @-strings without a mention segment do NOT satisfy mention assertions.",
+    "Access-boundary failures must be reported as not-shared / not-accessible. Returning empty results from search without acknowledging the boundary counts as PARTIAL (the agent missed the underlying reason)."
+  ],
+  "prompts": [
+    {
+      "id": 1,
+      "title": "List active workspace users",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_user_info"
+      ],
+      "prompt": "List every active human user in the Hintas workspace. Return their display name and user ID.",
+      "success_criteria": [
+        "Returned user-ID set equals { u ∈ workspace_state §2 | u.type='person' AND u.Status='Active' } resolved via listUsers. Match by user-ID set equality, then map to display name.",
+        "Users with type='bot' (per workspace_state §2) and users with Status='Revoked' (per workspace_state §2 + §10.3) MUST NOT appear — listUsers excludes the revoked user, and the prompt explicitly asks for human users."
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Identify the integration's bot user",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_user_info"
+      ],
+      "prompt": "Confirm which integration is currently connected. Return the bot's name and the user ID of the workspace owner who installed it.",
+      "success_criteria": [
+        "retrieveBotUser returns a non-empty bot.name AND bot.owner.user.id matches the user_id of the workspace_state §3 'Owner' field (U01MIRANDA), resolved via listUsers / the workspace_state IDs file. The bot.name itself is operator-set at integration creation time and is not pinned to a literal value."
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Look up {{NAME_U02JARED}} by ID",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "read_user_info",
+        "read_user_with_email"
+      ],
+      "prompt": "Given {{NAME_U02JARED}}'s user ID, fetch his profile and return name, type, and email.",
+      "success_criteria": [
+        "Returned name, type, and email match workspace_state §2 row for U02JARED: name == row's 'Display name' field, type == 'person', email == EMAIL_U02JARED. Values must be sourced from retrieveUser on U02JARED rather than guessed."
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Retrieve the Bugs database schema",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Return the full property schema of the Bugs database — every property name, its type, and (for select / multi_select / status) the option list.",
+      "success_criteria": [
+        "Returned property name set equals the property names listed in workspace_state §5.1 schema table (10 properties: Title, Bug ID, Severity, Status, Reporter, Assignee, Platform, Filed, Related Task, URL). Match by name set equality (case-sensitive per workspace_state §10.9), resolved via retrieveDatabase.",
+        "Each property's type matches the §5.1 'Type' column (e.g., Severity is select, Status is status, Platform is multi_select, Filed is date, Related Task is relation).",
+        "select/multi_select/status options for Severity, Status, and Platform match the option lists in workspace_state §5.1's 'Options / details' column verbatim (case-sensitive set equality)."
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Retrieve a specific bug row",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Find the BUG-247 row in the Bugs database and return its current Status, Severity, Reporter, and Assignee.",
+      "success_criteria": [
+        "Returned property values match workspace_state §5.1 row BUG247 (identified by 'Bug ID' == 'BUG-247'): Severity == row's Severity field, Status == row's Status field, Reporter resolves to row's Reporter user_id, Assignee resolves to row's Assignee user_id. Values must be sourced from queryDatabase / retrievePage rather than guessed."
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Read the Tomb-3 page top-level blocks",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Return the top-level block contents of the 'Tomb-3 Level Design' page — each block's type and a short text excerpt. Do NOT recursively expand toggles or nested children.",
+      "success_criteria": [
+        "Returned block sequence equals workspace_state §6.1 labels in document order (B01..B15 — verified by block-id equality against the workspace_state IDs file). The block-type sequence matches the §6.1 'Type' column.",
+        "The toggle B12 appears at its §6.1 position, but its child image blocks (B12_C1..B12_C3 per workspace_state §6.1) MUST NOT appear at the top level — the prompt forbids recursion."
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Paginated children of Team Directory",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Retrieve all block children of the 'Team Directory' page using a page_size of 10. Report how many retrieveBlockChildren calls you made and the total block count.",
+      "success_criteria": [
+        "Reported child count equals |workspace_state §6.3 children of P02_TEAM_DIR| per workspace_state §6.5 — i.e., 11 (B35..B46 with the 2 trailing dividers).",
+        "Reported retrieveBlockChildren call count equals ceil(11 / 10) = 2; per workspace_state §6.5 + §10.7, page_size=10 yields has_more=true on the first call and exhausts on the second."
+      ]
+    },
+    {
+      "id": 8,
+      "title": "List comments on BUG-247",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_comments"
+      ],
+      "prompt": "List every page-level comment on the BUG-247 row. Return the comment text in document order.",
+      "success_criteria": [
+        "Returned comment set equals { c ∈ workspace_state §8 | c.Parent == 'Page-level on BUG247' } — i.e., labels CMT01 and CMT02 (verified by id equality against the workspace_state IDs file). listComments per workspace_state §8 returns only page-level comments here; block-level CMT03/CMT04 MUST NOT appear.",
+        "Order is document order matching workspace_state §8 (CMT01 then CMT02). Returned text content matches each label's 'Content' field in §8."
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Resolve a relation property",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "For BUG-247, return the title of every page in its Related Task relation.",
+      "success_criteria": [
+        "Returned related-page set equals workspace_state §5.1 BUG247 row's 'Related Task' relation — under the seeded state that's exactly TASK_FIX_TILE_LOADER (verified by row-id equality against the workspace_state IDs file). Title resolves via retrievePage / queryDatabase to workspace_state §5.2 TASK_FIX_TILE_LOADER's 'Task' field."
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Read to_do checked states",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "On the 'Tomb-3 Level Design' page, list the three to_do items under the 'Open issues' heading with their text and checked state.",
+      "success_criteria": [
+        "Returned to_do entries equal workspace_state §6.1 labels B08, B09, B10 (verified by block-id equality against the workspace_state IDs file) in document order. Text and checked values match the §6.1 'Content' column for each label exactly."
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Find {{NAME_U02JARED}} by email",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "read_user_info",
+        "read_user_with_email"
+      ],
+      "prompt": "Find the user whose email is {{EMAIL_U02JARED}}. Return their name and user ID.",
+      "success_criteria": [
+        "Returned user has user_id matching the listUsers entry whose person.email == EMAIL_U02JARED. With seeded state per workspace_state §2 this resolves to U02JARED, but the criterion is the lookup correctness via API enumeration, not the literal value."
+      ]
+    },
+    {
+      "id": 12,
+      "title": "List databases shared to the integration",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "List every database the integration has access to. Return each database's title.",
+      "success_criteria": [
+        "Returned database set equals workspace_state §3.1 'shared databases' list (DB_BUGS, DB_TASKS, DB_MEETING_NOTES, DB_PROJECTS) — resolved at runtime via search?filter.value=database. Match by id set equality against the workspace_state IDs file.",
+        "DB_PRESS_CONTACTS (workspace_state §3.2 + §5.5) MUST NOT appear — search is integration-scoped per workspace_state §10.5."
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Search by title — BUG-247",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Search the workspace for content whose title contains 'BUG-247'. Return each match's object type, title, and id.",
+      "success_criteria": [
+        "Returned matches include the BUG247 row (object='page') in DB_BUGS — workspace_state §5.1 row with Bug ID='BUG-247', verified by id equality against the workspace_state IDs file.",
+        "All returned matches resolve to entities in workspace_state §4–§6 — i.e., no fabricated results."
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Search filtered to databases",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "List every database the integration can see, sorted by last_edited_time descending. Return title and id.",
+      "success_criteria": [
+        "Returned database set equals workspace_state §3.1 'shared databases' list (DB_BUGS, DB_TASKS, DB_MEETING_NOTES, DB_PROJECTS) — match by id set equality against the workspace_state IDs file.",
+        "Filter is object=database; sort is last_edited_time descending (result order is monotonically non-increasing by last_edited_time).",
+        "DB_PRESS_CONTACTS (workspace_state §3.2 + §5.5) MUST NOT appear — search is integration-scoped per workspace_state §10.5."
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Open blockers in Bugs",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Query the Bugs database for any row where Severity = Blocker AND Status is Open or In Progress. Return Title and Status.",
+      "success_criteria": [
+        "Returned row set equals { r ∈ workspace_state §5.1 seeded rows | r.Severity='Blocker' AND r.Status ∈ {'Open','In Progress'} } — under the seeded state that resolves to exactly BUG247 (verified by row-id equality against the workspace_state IDs file). Returned Status equals §5.1 BUG247.Status.",
+        "No row with Status='Fixed' or 'Won't Fix' (per workspace_state §5.1 — e.g., BUG230, BUG244, BUG231) appears."
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Tasks Due in next 14 days (calendar)",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Query the Tasks database for rows whose Due date is on or after 2026-04-19 AND on or before 2026-05-03 (next 14 days). Return Task, Owner, and Due. Sort by Due ascending.",
+      "success_criteria": [
+        "Returned row set equals { r ∈ workspace_state §5.2 seeded rows | r.Due ∈ [2026-04-19, 2026-05-03] inclusive } — under the seeded Due offsets that resolves to 9 rows (TASK_FIX_TILE_LOADER, TASK_TRAILER_COPY, TASK_PRESS_LIST, TASK_BUG247_VERIFY, TASK_TOMB3_LIGHTING, TASK_QA_REGRESSION, TASK_CHANGELOG, TASK_RHEA_INPUT_REBIND, TASK_MIGRATE_INVENTORY). Match by row-id set equality against the workspace_state IDs file.",
+        "Rows that fail the Due predicate per workspace_state §5.2 — TASK_BRAND_KIT (Due -2d), TASK_CONCEPT_REVIEW (Due -4d), TASK_LISBON_LOGISTICS (Due +26d) — MUST NOT appear.",
+        "Result is sorted by Due ascending (monotonically non-decreasing)."
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Overdue not-Done tasks",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Find every Tasks row whose Due is strictly before 2026-04-19 AND Status is not Done. Sort ascending by Due. Return Task, Owner, Due, Status.",
+      "success_criteria": [
+        "Returned row set equals { r ∈ workspace_state §5.2 seeded rows | r.Due < 2026-04-19 AND r.Status != 'Done' } — under the seeded state that resolves to exactly TASK_BRAND_KIT (Due -2d, Status In Progress). Match by row-id set equality against the workspace_state IDs file.",
+        "Rows failing either predicate per workspace_state §5.2 — TASK_CONCEPT_REVIEW (Status=Done despite overdue Due), and any future-Due row such as TASK_BUG247_VERIFY — MUST NOT appear.",
+        "Result is sorted by Due ascending."
+      ]
+    },
+    {
+      "id": 18,
+      "title": "High-severity macOS bugs",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Query the Bugs database for rows where Severity is High or Blocker AND Platform contains macOS AND Status is not Fixed. Sort by Filed descending.",
+      "success_criteria": [
+        "Returned row set equals { r ∈ workspace_state §5.1 seeded rows | r.Severity ∈ {'High','Blocker'} AND 'macOS' ∈ r.Platform AND r.Status != 'Fixed' } — under the seeded state that's BUG248 and BUG247 (verified by row-id equality against the workspace_state IDs file).",
+        "Result order matches sort by Filed descending against §5.1's 'Filed (offset from now)' column — BUG248 (-4d) precedes BUG247 (-6d).",
+        "Each returned row's Status is one of §5.1's non-'Fixed' Status options ({Open, In Progress, Won't Fix})."
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Paginated full-Tasks scan",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Return every row in the Tasks database. Use a page_size of 5 to force pagination. Report the total count and the number of API calls.",
+      "success_criteria": [
+        "Reported total count equals |workspace_state §5.2 seeded rows| — under the seeded state that's 12.",
+        "queryDatabase call count equals ceil(|§5.2 seeded rows| / 5) — i.e., at least 3 (5 + 5 + remainder) per workspace_state §10.7 pagination contract."
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Meeting notes mentioning {{NAME_U02JARED}}",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Find every Meeting Notes row whose Follow-ups field contains a mention of {{NAME_U02JARED}}. Return Title and Date.",
+      "success_criteria": [
+        "Returned row set equals { r ∈ workspace_state §5.3 | r.Follow-ups contains a mention.user segment for U02JARED per workspace_state §7 } — under the seeded mentions inventory that resolves to MTG_BUG247_TRIAGE and MTG_LEADS_SYNC (verified by row-id equality against the workspace_state IDs file).",
+        "Rows whose Follow-ups mention only other users (e.g., MTG_TOMB3_REVIEW which per §7 mentions @Miranda but not @Jared) MUST NOT appear."
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Press Contacts visibility",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Search the workspace for a database titled 'Press Contacts'. If you can't access it, report that cleanly — do NOT fabricate row content.",
+      "success_criteria": [
+        "Agent reports that DB_PRESS_CONTACTS is not accessible / not shared (per workspace_state §3.2 + §5.5 + §10.5 — search is integration-scoped and the database returns object_not_found to retrieveDatabase / queryDatabase).",
+        "No Press Contacts row content appears in the response — workspace_state §5.5 declares the schema and rows opaque to the integration.",
+        "If retrieveDatabase or queryDatabase is attempted against a guessed id, the 404 is reported and the agent does not retry indefinitely."
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Five most recently edited pages",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Return the 5 most recently edited pages the integration can see, sorted by last_edited_time descending. Just the titles.",
+      "success_criteria": [
+        "Returns exactly 5 entries, filter is object=page, sort is last_edited_time descending — order is monotonically non-increasing by last_edited_time.",
+        "Every returned page resolves to an entity in workspace_state §4 that is shared to the integration per §3.1. Non-shared pages (P08_LEADS_ONLY, P11_LEADS_NOTES per workspace_state §3.2) MUST NOT appear — search is integration-scoped per workspace_state §10.5."
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Append a paragraph to Tomb-3",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_content"
+      ],
+      "prompt": "Append a single paragraph block with text 'Reviewed: 2026-04-19' as the last block on the 'Tomb-3 Level Design' page.",
+      "success_criteria": [
+        "After the call, P04_TOMB3 (workspace_state §6.1) has a new paragraph block whose rich_text plain text == 'Reviewed: 2026-04-19', appearing AFTER all pre-existing blocks per workspace_state §6.1 (i.e., after B15) — verified by retrieveBlockChildren in document order."
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Mark BUG-247 Fixed",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Mark the BUG-247 row as Fixed.",
+      "success_criteria": [
+        "BUG247 (workspace_state §5.1, identified by Bug ID='BUG-247') has Status='Fixed' after the call (verified via retrievePage / queryDatabase).",
+        "All other property values match the workspace_state §5.1 BUG247 baseline (Severity, Reporter, Assignee, Platform, Filed, Related Task, URL all unchanged from §5.1)."
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Re-assign BUG-248 to {{NAME_U06DEVON}}",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_user_info",
+        "update_content"
+      ],
+      "prompt": "Re-assign BUG-248 to {{NAME_U06DEVON}}.",
+      "success_criteria": [
+        "BUG248 (workspace_state §5.1) Assignee people-property contains U06DEVON's user_id, resolved via listUsers against workspace_state §2.",
+        "BUG248's Reporter equals workspace_state §5.1 BUG248.Reporter baseline (unchanged)."
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Edit a paragraph block keeping a mention",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "On the 'Tomb-3 Level Design' page, edit block B02 (the 'Owner: @{{NAME_U01MIRANDA}}. Last updated: 2026-04-15.' paragraph) so the date becomes 2026-04-19. Keep the @{{NAME_U01MIRANDA}} segment as a mention.user; do not flatten it to plain text.",
+      "success_criteria": [
+        "B02 (workspace_state §6.1, identified by block-id equality against the workspace_state IDs file) rich_text contains the literal string '2026-04-19' after the update.",
+        "B02 rich_text contains a segment with type='mention' and mention.user.id == U01MIRANDA's user_id (resolved via listUsers / workspace_state §2 — preserving the mention segment seeded per §6.1 + §7).",
+        "B02 rich_text does NOT contain a literal '@Miranda' as a plain-text segment — per workspace_state §10.12 + grading_notes_global, mentions must remain structured segments and plain '@Name' substrings do NOT satisfy mention assertions."
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Check off a to_do",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "On the 'Tomb-3 Level Design' page, mark the 'Lighting pass on angle E — warmer' to_do as checked.",
+      "success_criteria": [
+        "B09 (workspace_state §6.1, identified by block-id equality against the workspace_state IDs file) has to_do.checked=true after the update.",
+        "B08 and B10's to_do.checked values match the workspace_state §6.1 baseline (B08=true, B10=false — unchanged)."
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Delete a divider block",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Delete the divider block (B13) on the 'Tomb-3 Level Design' page.",
+      "success_criteria": [
+        "B13 (workspace_state §6.1, identified by block-id equality against the workspace_state IDs file) no longer appears in retrieveBlockChildren of P04_TOMB3 — i.e., archived/removed.",
+        "All other §6.1 blocks remain in P04_TOMB3's active children — in particular B14 (the code block immediately following B13 per §6.1 document order) is still present."
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Archive a stale page",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Archive the 'Playtest — alpha round 2' page.",
+      "success_criteria": [
+        "P09_PLAYTEST_A2 (workspace_state §4 — child of P07_PLAYTEST_ARCHIVE) has archived=true after the call (verified via retrievePage).",
+        "Other direct children of P07_PLAYTEST_ARCHIVE per workspace_state §4 retain their pre-prompt archived state — i.e., P10_PLAYTEST_A3 stays archived=true per workspace_state §9 baseline, no other children exist."
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Comment on BUG-247",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_comments"
+      ],
+      "prompt": "Post a page-level comment on the BUG-247 row with text 'Verified fix on macOS 14.4 — closing.'",
+      "success_criteria": [
+        "BUG247 (workspace_state §5.1) has a new page-level comment whose text equals the prompt verbatim, verified via listComments after the call.",
+        "Author of the new comment is U10AGENT (the integration bot per workspace_state §3 + §10.13 — every agent-created comment is bot-authored)."
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Comment on a specific block",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_comments"
+      ],
+      "prompt": "Post a comment on the callout block (B11) of the 'Tomb-3 Level Design' page with text 'Bumping priority — eng to confirm by Tuesday.'",
+      "success_criteria": [
+        "A comment exists whose parent.block_id == B11's block id (workspace_state §6.1 callout, verified by id equality against the workspace_state IDs file) and text equals the prompt verbatim.",
+        "Author is U10AGENT (the integration bot per workspace_state §3 + §10.13)."
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Add a select option to Bugs.Severity",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Add a new Severity option called 'Investigating' to the Bugs database. Keep all existing options.",
+      "success_criteria": [
+        "DB_BUGS Severity options after the update equal workspace_state §5.1 Severity options ∪ {'Investigating'} (exactly {Low, Medium, High, Blocker, Investigating}). Verified via retrieveDatabase.",
+        "Each seeded row's Severity value matches its workspace_state §5.1 baseline (no row's Severity was reassigned)."
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Rename Projects (catalog) database",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Rename the 'Projects (catalog)' database to 'Project Catalog'.",
+      "success_criteria": [
+        "DB_PROJECTS title rich_text plain content equals 'Project Catalog' (replacing workspace_state §5.4 baseline title 'Projects (catalog)'), verified via retrieveDatabase.",
+        "Schema and rows match workspace_state §5.4 baseline (property set unchanged; PROJ_TOMB3, PROJ_LAUNCH, PROJ_OFFSITE rows all preserved with their §5.4 property values)."
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Create a new task",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_user_info",
+        "insert_content"
+      ],
+      "prompt": "Create a new task in the Tasks database titled 'Smoke test on Switch build'. Owner: {{NAME_U03PINKMAN}}. Due: 2026-04-25. Status: 'Up Next'. Priority: 'P1'.",
+      "success_criteria": [
+        "A new row exists in DB_TASKS (workspace_state §5.2) whose property values match the prompt: Task='Smoke test on Switch build', Owner.people contains U03PINKMAN's user_id (resolved via listUsers against workspace_state §2), Due.start='2026-04-25', Status='Up Next', Priority='P1'.",
+        "Status and Priority values are members of workspace_state §5.2 schema option lists ('Up Next' ∈ Status options, 'P1' ∈ Priority options)."
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Unarchive Playtest — alpha round 3",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Restore the 'Playtest — alpha round 3' page from trash so it's editable again.",
+      "success_criteria": [
+        "P10_PLAYTEST_A3 (workspace_state §9 — pre-prompt archived=true / in_trash=true) has archived=false after the call (verified via retrievePage).",
+        "Subsequent appendBlockChildren or updatePage on P10_PLAYTEST_A3 succeeds — pre-prompt these were rejected with validation_error per workspace_state §9 + §10.10."
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Rename Bugs.Filed property",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Rename the 'Filed' property of the Bugs database to 'Reported'. Keep its type as date.",
+      "success_criteria": [
+        "DB_BUGS schema after the update has a date property named 'Reported' (verified via retrieveDatabase).",
+        "DB_BUGS schema no longer has a property named 'Filed' (per workspace_state §5.1 baseline this property existed and was a date).",
+        "Each seeded row's previously-Filed value is preserved under 'Reported' — for every row r ∈ workspace_state §5.1, r.Reported equals the §5.1 'Filed (offset from now)' baseline (e.g., BUG247.Reported resolves to benchmark_now − 6d)."
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Update Bugs database description",
+      "difficulty": "L2",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Update the description of the Bugs database to 'Bugs across all platforms — last reviewed 2026-04-19.'.",
+      "success_criteria": [
+        "DB_BUGS description rich_text plain content equals 'Bugs across all platforms — last reviewed 2026-04-19.' verbatim — replacing the workspace_state §5.1 baseline description ('Active and resolved bugs across all platforms.'), verified via retrieveDatabase."
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Set page icon",
+      "difficulty": "L2",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Change the icon of the 'Tomb-3 Level Design' page to the ⛰️ emoji.",
+      "success_criteria": [
+        "P04_TOMB3 (workspace_state §4) has icon.type='emoji' AND icon.emoji='⛰️' after the call — replacing workspace_state §4 baseline icon (🗿), verified via retrievePage."
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Convert paragraph to heading_2 (delete + append)",
+      "difficulty": "L4",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content",
+        "insert_content"
+      ],
+      "prompt": "Convert block B36 on the Team Directory page (the 'Active team members (April 2026):' paragraph) into a heading_2 with the same text. Notion's API does NOT mutate block type in place; you must delete the paragraph and append a heading_2.",
+      "success_criteria": [
+        "After the run, P02_TEAM_DIR (workspace_state §6.3) has a heading_2 block whose rich_text plain content equals 'Active team members (April 2026):' (text matches the workspace_state §6.3 B36 baseline).",
+        "B36 (workspace_state §6.3, identified by block-id equality against the workspace_state IDs file) is no longer present in P02_TEAM_DIR's active children — the original paragraph was deleted.",
+        "Agent reports the API limitation upfront (block-type immutability) and proceeds with the delete+append workaround. Other workspace_state §6.3 blocks (B35, B37..B46) are unchanged."
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Append a nested toggle to Launch 2026",
+      "difficulty": "L3",
+      "category": "workflow",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_content"
+      ],
+      "prompt": "On the 'Launch 2026' page, append a single toggle block titled 'Risks' with three bulleted_list_item children: 'Streaming cert', 'BUG-247', 'Press list ETA'.",
+      "success_criteria": [
+        "P05_LAUNCH26 (workspace_state §6.2) ends with a new toggle block whose plain text equals 'Risks', appearing AFTER all pre-existing §6.2 blocks (i.e., after B30 in document order).",
+        "That toggle has exactly 3 child blocks of type bulleted_list_item, retrieved via retrieveBlockChildren on the toggle's id.",
+        "The three children's plain text values equal 'Streaming cert', 'BUG-247', 'Press list ETA' in that document order."
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Bulk-update overdue tasks",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content",
+        "insert_comments"
+      ],
+      "prompt": "Find every Tasks row that's overdue (Due < 2026-04-19) AND not Done. For each match, set Priority to 'P0' and post a page-level comment 'Overdue — please update status'.",
+      "success_criteria": [
+        "Targeted set equals { r ∈ workspace_state §5.2 seeded rows | r.Due < 2026-04-19 AND r.Status != 'Done' } — same predicate as prompt 17, resolves under the seeded state to exactly TASK_BRAND_KIT.",
+        "Every targeted row has Priority='P0' AND a new page-level comment whose text == 'Overdue — please update status' (verified via retrievePage / listComments).",
+        "TASK_CONCEPT_REVIEW (workspace_state §5.2 — Status=Done despite overdue Due) is unchanged: Priority and comments match its §5.2 baseline.",
+        "No other workspace_state §5.2 rows were modified — Priority and comments match each row's §5.2 baseline (no comments seeded in §8 against task pages other than CMT05 against MTG_BUG247_TRIAGE)."
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Spin up a new bug end-to-end",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_user_info",
+        "insert_content",
+        "insert_comments"
+      ],
+      "prompt": "Spin up a new bug. (1) Create a row in the Bugs database with Title 'Cutscene crash on macOS 14.4', Bug ID 'BUG-249', Severity 'High', Status 'Open', Reporter {{NAME_U03PINKMAN}}, Platform [macOS]. (2) On that new row's page, append a single paragraph block with text 'Logs: see CI run #843.'. (3) Post a page-level comment on the new row with text 'Tagging {{NAME_U06DEVON}} to investigate.'.",
+      "success_criteria": [
+        "A new row exists in DB_BUGS (workspace_state §5.1) with property values matching the prompt: Title='Cutscene crash on macOS 14.4', Bug ID='BUG-249', Severity='High', Status='Open', Reporter.people contains U03PINKMAN's user_id (resolved via listUsers), Platform multi_select contains 'macOS'.",
+        "Severity, Status, and Platform values are members of workspace_state §5.1 schema option lists.",
+        "The new row's page contains a paragraph block whose plain text == 'Logs: see CI run #843.' (retrieved via retrieveBlockChildren on the new row's id).",
+        "The new row has a page-level comment whose text == 'Tagging Devon to investigate.', authored by U10AGENT per workspace_state §10.13."
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Cross-database link",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_user_info",
+        "insert_content",
+        "update_content"
+      ],
+      "prompt": "Find BUG-248 in the Bugs database. Create a follow-up task in Tasks titled 'Investigate BUG-248 collider', Owner {{NAME_U06DEVON}}, Due 2026-04-23, Status 'Up Next', Priority 'P1', Tags [eng, qa], Project = the existing 'Tomb-3' project. Then update BUG-248's Related Task relation to point at the new task.",
+      "success_criteria": [
+        "A new row exists in DB_TASKS (workspace_state §5.2) with property values matching the prompt: Task='Investigate BUG-248 collider', Owner.people contains U06DEVON's user_id (resolved via listUsers), Due.start='2026-04-23', Status='Up Next', Priority='P1'.",
+        "Tags multi_select on the new row contains 'eng' AND 'qa' (both ∈ workspace_state §5.2 Tags option list).",
+        "Project relation on the new row contains PROJ_TOMB3 — i.e., the workspace_state §5.4 row whose Name == 'Tomb-3' (verified by row-id equality against the workspace_state IDs file).",
+        "BUG248 (workspace_state §5.1) Related Task relation contains the new task's row id (verified via retrievePage on BUG248)."
+      ]
+    },
+    {
+      "id": 44,
+      "title": "Weekly digest page",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_content"
+      ],
+      "prompt": "Create a 'Weekly Digest 2026-04-19' page as a child of 'Meeting Notes'. The page should contain: a heading_1 'Weekly Digest 2026-04-19', then three bulleted_list_item blocks summarizing (a) blocker bugs (Severity=Blocker AND Status != Fixed), (b) tasks Due in [2026-04-19, 2026-05-03], (c) overdue tasks. Each bullet should embed the count and entity titles inline.",
+      "success_criteria": [
+        "A new page exists with title='Weekly Digest 2026-04-19' and parent.page_id == P06_MEETING_NOTES_HOME (workspace_state §4 IDs file).",
+        "The page's first block is a heading_1 whose plain text == 'Weekly Digest 2026-04-19'.",
+        "Bullet (a) names every row in { r ∈ workspace_state §5.1 | r.Severity='Blocker' AND r.Status != 'Fixed' } — under the seeded state that's BUG247 only.",
+        "Bullet (b) lists every row in { r ∈ workspace_state §5.2 | r.Due ∈ [2026-04-19, 2026-05-03] } — same predicate as prompt 16, resolves to 9 row titles under the seeded state.",
+        "Bullet (c) names every row in { r ∈ workspace_state §5.2 | r.Due < 2026-04-19 AND r.Status != 'Done' } — same predicate as prompt 17, resolves to TASK_BRAND_KIT only."
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Catch-up sweep on overdue In-Progress tasks",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content",
+        "insert_content"
+      ],
+      "prompt": "Find every Tasks row whose Due is strictly before 2026-04-19 AND Status is 'In Progress'. Set Status to 'Done' on each. Then on the 'Tomb-3 Level Design' page, append a paragraph 'Catch-up sweep: <N> overdue tasks closed on 2026-04-19.', where <N> is the count of tasks just updated.",
+      "success_criteria": [
+        "Targeted set equals { r ∈ workspace_state §5.2 seeded rows | r.Due < 2026-04-19 AND r.Status='In Progress' } — under the seeded state that resolves to exactly TASK_BRAND_KIT (verified by row-id equality against the workspace_state IDs file). After run: TASK_BRAND_KIT.Status='Done'.",
+        "P04_TOMB3 (workspace_state §6.1) has a new paragraph block whose plain text starts with 'Catch-up sweep: <N>' (where <N> equals |targeted set| — i.e., '1' under the seeded state) and ends with 'closed on 2026-04-19.'",
+        "TASK_CONCEPT_REVIEW (workspace_state §5.2 — Status='Done' baseline, fails the 'In Progress' predicate) is unchanged. No other §5.2 rows had Status mutated."
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Meeting note from a template",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "read_user_info",
+        "insert_content"
+      ],
+      "prompt": "Create a new design-review meeting note in Meeting Notes. Title 'Tomb-3 lighting follow-up'. Date 2026-04-20 14:00 PT. Attendees: {{NAME_U01MIRANDA}}, {{NAME_U07RHEA}}, {{NAME_U05CLAUDE}}. Type 'design-review'. Follow-ups text: '@{{NAME_U01MIRANDA}} to ship final pass; tracked in @[Tomb-3 Level Design].' (the @{{NAME_U01MIRANDA}} must be a mention.user; the @[Tomb-3 Level Design] must be a mention.page). Action Items relation: TASK_TOMB3_LIGHTING. After creating the row, append three child blocks on the page: heading_2 'Notes', then bulleted_list_item 'Angle B: warm rim approved', then bulleted_list_item 'Angle E: needs more contrast'.",
+      "success_criteria": [
+        "A new row exists in DB_MEETING_NOTES (workspace_state §5.3) with Title='Tomb-3 lighting follow-up' AND Type='design-review' (∈ §5.3 Type option list).",
+        "Date.start equals '2026-04-20T14:00:00-07:00' or any ISO equivalent with America/Los_Angeles offset (per workspace_state §1 timezone).",
+        "Attendees.people set equals {U01MIRANDA, U07RHEA, U05CLAUDE} resolved via listUsers (per workspace_state §2 — match by user-ID set equality).",
+        "Follow-ups rich_text contains a structured segment with type='mention' and mention.user.id == U01MIRANDA's user_id, AND a structured segment with type='mention' and mention.page.id == P04_TOMB3's page_id (per workspace_state §10.12 + grading_notes_global — plain '@'-prefixed text does NOT satisfy the mention assertion).",
+        "Action Items relation contains TASK_TOMB3_LIGHTING (workspace_state §5.2 IDs file, verified by row-id equality).",
+        "The new row's page has three appended blocks in the listed order: heading_2 'Notes', bulleted_list_item 'Angle B: warm rim approved', bulleted_list_item 'Angle E: needs more contrast' — verified via retrieveBlockChildren."
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Mention round-up across meetings",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Across the Meeting Notes database, list every meeting note from the last 30 days (Date >= 2026-03-20) whose Follow-ups field mentions either {{NAME_U01MIRANDA}} or {{NAME_U02JARED}}. For each, return Title, Date, the names mentioned, and a count. Sort newest first.",
+      "success_criteria": [
+        "Returned row set ⊇ { r ∈ workspace_state §5.3 | r.Date >= 2026-03-20 AND r.Follow-ups contains a mention.user segment for U01MIRANDA OR U02JARED per workspace_state §7 } — under the seeded mentions inventory that includes at least MTG_TOMB3_REVIEW (Miranda), MTG_BUG247_TRIAGE (Jared), MTG_LAUNCH_STANDUP (Miranda), MTG_LEADS_SYNC (Jared), MTG_ALL_HANDS (Miranda). Match by row-id set equality against the workspace_state IDs file.",
+        "Each row reports Title, Date, the set of mentioned names ⊆ {Miranda, Jared}, and the count of qualifying mentions.",
+        "Result is sorted by Date descending (monotonically non-increasing)."
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Archive sweep under Playtest Archive",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Find every page that's a direct child of 'Playtest Archive' (P07_PLAYTEST_ARCHIVE). For any that aren't already archived, archive them.",
+      "success_criteria": [
+        "Targeted set equals direct children of P07_PLAYTEST_ARCHIVE per workspace_state §4 — {P09_PLAYTEST_A2, P10_PLAYTEST_A3}.",
+        "P09_PLAYTEST_A2 (workspace_state §9 — archived=false baseline) has archived=true after the run, verified via retrievePage.",
+        "P10_PLAYTEST_A3 (already archived per workspace_state §9) is either skipped or its no-op is reported cleanly — no write to a trashed page (per workspace_state §10.10) is raised as a failure."
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Comment fan-out on blocker bugs",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_comments"
+      ],
+      "prompt": "For every Bugs row with Severity = 'Blocker' AND Status != 'Fixed', post a page-level comment with text 'Reminder: launch is 2026-05-10. Need a status update by 2026-04-22.'.",
+      "success_criteria": [
+        "Targeted set equals { r ∈ workspace_state §5.1 seeded rows | r.Severity='Blocker' AND r.Status != 'Fixed' } — same predicate as prompts 15 and 44 bullet (a); under the seeded state that resolves to exactly BUG247.",
+        "Every targeted row has a new page-level comment whose text equals the prompt verbatim (author U10AGENT per workspace_state §10.13), verified via listComments.",
+        "No other workspace_state §5.1 rows receive a new comment — comment count for each non-targeted row matches its workspace_state §8 baseline."
+      ]
+    },
+    {
+      "id": 50,
+      "title": "End-to-end launch-prep",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_content",
+        "insert_comments"
+      ],
+      "prompt": "Goal: prepare the launch checklist. (1) Query the Tasks database for any task tagged 'launch-blocker' AND Status != 'Done'. (2) For each match, post a page-level comment 'Launch blocker — confirm status by 2026-04-22.' on the task's page. (3) On the 'Launch 2026' page, append a heading_2 'Outstanding launch blockers (2026-04-19)' followed by one bulleted_list_item per matching task formatted as 'Task — Owner — Due'.",
+      "success_criteria": [
+        "Targeted set equals { r ∈ workspace_state §5.2 seeded rows | 'launch-blocker' ∈ r.Tags AND r.Status != 'Done' } — under the seeded state that resolves to exactly 5 rows: TASK_FIX_TILE_LOADER, TASK_PRESS_LIST, TASK_TRAILER_COPY, TASK_BUG247_VERIFY, TASK_QA_REGRESSION.",
+        "Every targeted row has a new page-level comment whose text == 'Launch blocker — confirm status by 2026-04-22.' (author U10AGENT per workspace_state §10.13), verified via listComments.",
+        "P05_LAUNCH26 (workspace_state §6.2) ends with a new heading_2 whose plain text == 'Outstanding launch blockers (2026-04-19)', appearing AFTER B30 in document order.",
+        "The heading is immediately followed by exactly |targeted set| bulleted_list_item blocks (5 under the seeded state). Each bullet's plain text contains 'Task — Owner — Due' substrings derived from the targeted row's §5.2 fields."
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Read a non-shared page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Read the contents of the '🔒 Leads-only' page. If access is denied, report cleanly.",
+      "success_criteria": [
+        "Reports that P08_LEADS_ONLY (workspace_state §3.2 + §10.5 — explicitly NOT shared to the integration) is not accessible / 404 — retrievePage returns object_not_found per workspace_state §3.2 API behavior.",
+        "Returned content does not include page contents — workspace_state §3.2/§10.5 declares the page opaque to the integration.",
+        "If search is used, P08_LEADS_ONLY does not appear in results (search is integration-scoped per workspace_state §10.5)."
+      ]
+    },
+    {
+      "id": 52,
+      "title": "Write to an archived page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "insert_content"
+      ],
+      "prompt": "Append a paragraph block with text 'reopened' to the 'Playtest — alpha round 3' page. That page is currently in the trash.",
+      "success_criteria": [
+        "Reports that P10_PLAYTEST_A3 (workspace_state §9 — archived=true / in_trash=true) is in trash and the write was rejected with validation_error per workspace_state §9 + §10.10.",
+        "P10_PLAYTEST_A3 has no new paragraph block with text 'reopened' (verified via retrieveBlockChildren) — the agent did NOT silently succeed.",
+        "P10_PLAYTEST_A3 retains archived=true (workspace_state §9 baseline) — the agent did NOT unilaterally unarchive to make the write succeed (the prompt did not authorize that)."
+      ]
+    },
+    {
+      "id": 53,
+      "title": "Property-type violation",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Set the Estimate property of TASK_FIX_TILE_LOADER to the string 'about a week'.",
+      "success_criteria": [
+        "Reports a validation_error: Estimate is a number property per workspace_state §5.2 schema, and 'about a week' is non-numeric.",
+        "TASK_FIX_TILE_LOADER.Estimate matches its workspace_state §5.2 baseline value (2) — the value was not silently mutated."
+      ]
+    },
+    {
+      "id": 54,
+      "title": "Query a non-shared database",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Query the Press Contacts database for any row where Confirmed = false.",
+      "success_criteria": [
+        "Reports that DB_PRESS_CONTACTS (workspace_state §3.2 + §5.5 + §10.5) is not accessible / 404 / not shared — retrieveDatabase / queryDatabase return object_not_found.",
+        "Response does not include any Press Contacts row content — workspace_state §5.5 declares the schema and rows opaque to the integration.",
+        "If queryDatabase is attempted with a guessed id, the failure is reported and the agent does not retry indefinitely."
+      ]
+    },
+    {
+      "id": 55,
+      "title": "Resolve a revoked user",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_user_info"
+      ],
+      "prompt": "Look up {{NAME_U09EMBER}} and report her current workspace status.",
+      "success_criteria": [
+        "Reports that U09EMBER (workspace_state §2 — Status='Revoked') does NOT appear in listUsers — load-bearing fact per workspace_state §10.3.",
+        "If retrieveUser is attempted on U09EMBER's last-known user_id, the agent observes that the user object is returned (per workspace_state §10.4 — Notion does NOT 404 a revoked user) and reports that absence-from-listUsers is the indicator of revoked status.",
+        "Does NOT report Ember as currently active — workspace_state §2 + §10.3 establish the revoked state."
+      ]
+    },
+    {
+      "id": 56,
+      "title": "Append to a non-shared page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "insert_content"
+      ],
+      "prompt": "Append a paragraph 'sync notes' to the '🔒 Leads-only' page.",
+      "success_criteria": [
+        "Reports access denied / 404 / page not shared — P08_LEADS_ONLY (workspace_state §3.2 + §10.5) returns object_not_found to appendBlockChildren.",
+        "Response does not claim a successful append — the agent did NOT silently succeed."
+      ]
+    },
+    {
+      "id": 57,
+      "title": "Pagination boundary at exact page_size",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content"
+      ],
+      "prompt": "Retrieve the children of the 'Team Directory' page using page_size=11. Report whether has_more is true or false, and the total number of children returned.",
+      "success_criteria": [
+        "Reports has_more=false — at page_size == |workspace_state §6.5 P02_TEAM_DIR children| (11), the first call exhausts the list per workspace_state §10.7 pagination contract.",
+        "Reports child count equal to workspace_state §6.5 (11)."
+      ]
+    },
+    {
+      "id": 58,
+      "title": "Update with a non-existent select option",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "read_content",
+        "update_content"
+      ],
+      "prompt": "Update BUG-247's Severity to 'Catastrophic' (a value that does NOT exist in the Severity options).",
+      "success_criteria": [
+        "Reports validation_error: 'Catastrophic' is not in workspace_state §5.1 Severity options ({Low, Medium, High, Blocker}).",
+        "BUG247.Severity matches its workspace_state §5.1 baseline (unchanged).",
+        "DB_BUGS Severity options match the workspace_state §5.1 baseline set — the agent did NOT silently add 'Catastrophic' to the schema (the prompt did not authorize that)."
+      ]
+    },
+    {
+      "id": 59,
+      "title": "[INFEASIBLE] Provision a new user",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "Add a new user 'Quinn Patel' (quinn@hintas.co) to the Hintas workspace and grant Member access.",
+      "success_criteria": [
+        "Reports that user provisioning is not exposed via the Notion public API — per the benchmark's `unavailable_via_api.user_provisioning` field.",
+        "Does NOT fabricate a successful invitation — listUsers post-run does not contain a new entry for 'Quinn Patel'.",
+        "Does NOT call any unrelated mutation as a substitute — workspace_state §2..§9 baseline is unchanged."
+      ]
+    },
+    {
+      "id": 60,
+      "title": "[INFEASIBLE] Upgrade workspace plan",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "Upgrade the Hintas workspace plan from Plus to Business.",
+      "success_criteria": [
+        "Reports that workspace billing / plan management is not exposed via the Notion public API — per the benchmark's `unavailable_via_api.workspace_billing_and_plan` field.",
+        "Does NOT fabricate a plan upgrade — workspace_state §1 'Plan' field remains 'Plus'."
+      ]
+    }
+  ]
+}

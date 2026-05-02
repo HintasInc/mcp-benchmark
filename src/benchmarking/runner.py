@@ -144,14 +144,14 @@ def filter_prompts(prompts: list[dict], args) -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 
 def reset_workspace(reset_script: str, prompt_id, token: str, token_env: str,
-                    dry_run: bool = False, state_file: str | None = None) -> bool:
+                    dry_run: bool = False, stack_name: str | None = None) -> bool:
     """Run reset_workspace.py. Returns True on success."""
     if dry_run:
         safe_print(f"    [DRY] Would reset workspace for prompt {prompt_id}")
         return True
     cmd = [sys.executable, reset_script, "--prompt-id", str(prompt_id)]
-    if state_file:
-        cmd.extend(["--state-file", state_file])
+    if stack_name:
+        cmd.extend(["--stack", stack_name])
     env = {**os.environ, token_env: token}
     safe_print(f"    ↻ Resetting workspace (prompt {prompt_id})…")
     try:
@@ -170,8 +170,7 @@ def reset_workspace(reset_script: str, prompt_id, token: str, token_env: str,
 
 
 def verify_workspace(verify_script: str, stack: Stack, token: str, token_env: str,
-                     report_path: Path, dry_run: bool = False,
-                     state_file: str | None = None) -> dict:
+                     report_path: Path, dry_run: bool = False) -> dict:
     """
     Run verify_workspace.py against a workspace.
 
@@ -186,9 +185,8 @@ def verify_workspace(verify_script: str, stack: Stack, token: str, token_env: st
         safe_print(f"    [DRY] Would verify {display} workspace")
         return {"ok": True, "hard": 0, "soft": 0, "report_path": str(report_path), "error": None}
 
-    cmd = [sys.executable, verify_script, "--soft", "--report", str(report_path)]
-    if state_file:
-        cmd.extend(["--state-file", state_file])
+    cmd = [sys.executable, verify_script, "--soft", "--report", str(report_path),
+           "--stack", stack.name]
     env = {**os.environ, token_env: token}
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
@@ -857,9 +855,6 @@ def run(args, platform, stack: Stack):
     total     = len(prompts)
     token_env = platform.downstream_token_env
 
-    state_path     = platform.state_file_for(stack)
-    state_path_str = str(state_path) if state_path else None
-
     for idx, p in enumerate(prompts, 1):
         pid   = p["id"]
         title = p["title"]
@@ -869,7 +864,7 @@ def run(args, platform, stack: Stack):
 
         if not args.skip_reset:
             reset_workspace(args.reset_script, pid, token, token_env,
-                            args.dry_run, state_path_str)
+                            args.dry_run, stack.name)
 
         prompt_dir = run_dir / f"p{pid}"
 
@@ -881,7 +876,7 @@ def run(args, platform, stack: Stack):
         if verify_due:
             verify_report = prompt_dir / "verify_report.json"
             v = verify_workspace(args.verify_script, stack, token, token_env,
-                                 verify_report, args.dry_run, state_path_str)
+                                 verify_report, args.dry_run)
             if v["error"]:
                 safe_print(c("yellow", f"    ! [{stack.display_name}] verify: {v['error']}"))
             elif v["hard"] or v["soft"]:

@@ -1,0 +1,1521 @@
+{
+  "timestamp": "20260429_205418__notion",
+  "stacks": [
+    "notion"
+  ],
+  "per_prompt": {
+    "1": {
+      "title": "List active workspace users",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent called notion-get-users, which returned all 11 users including bots. The result correctly lists 9 human users (type='person') with display names and user IDs, explicitly excluding the two bots (Hintas Agent and Notion MCP) as required.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 1,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 10,
+        "total_tokens": 466,
+        "wall_clock_s": 14.32
+      }
+    },
+    "2": {
+      "title": "Identify the integration's bot user",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent called notion-get-users with user_id='self' (which returned Miranda Okonkwo as the authenticated user/owner) and also fetched the full user list, correctly identifying 'Notion MCP' as the connected bot and Miranda Okonkwo (ID: 350d872b-594c-8158-8245-00023e08f098) as the workspace owner who installed it.",
+        "noteworthy_paths": [
+          "Called notion-get-users with user_id='self' in parallel with full user list \u2014 'self' returned the human owner rather than the bot, which is unusual; agent correctly inferred the bot from the full list"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 768,
+        "wall_clock_s": 20.94
+      }
+    },
+    "4": {
+      "title": "Retrieve the Bugs database schema",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent used notion-search and notion-fetch to retrieve the Bugs database schema, correctly returning all 10 properties with types and option lists; the date property appears as 'Reported' rather than 'Filed' (workspace drift), and all select/multi_select/status options match the seeded values.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 490,
+        "wall_clock_s": 14.1
+      }
+    },
+    "5": {
+      "title": "Retrieve a specific bug row",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent used notion-search, notion-fetch, and notion-get-users to find BUG-247 and resolve the user mention IDs; the result correctly reports Status=Fixed, Severity=Catastrophic, Reporter=Pinkman, Assignee=Devon Park, all grounded in tool results.",
+        "noteworthy_paths": [
+          "Agent resolved user mention URLs from the page properties by making separate notion-get-users calls for each user ID \u2014 good pattern for readable output"
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 616,
+        "wall_clock_s": 19.77
+      }
+    },
+    "6": {
+      "title": "Read the Tomb-3 page top-level blocks",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent fetched the Tomb-3 Level Design page via notion-fetch and returned the top-level blocks without recursively expanding the toggle; the toggle 'Reference angles (click to expand)' is present and its child image blocks are not listed at the top level, satisfying the non-recursion requirement.",
+        "noteworthy_paths": [
+          "notion-fetch renders page content as markdown/HTML rather than raw block objects, so block count (11) differs from the success criteria expectation (15 including trailing dividers) \u2014 dividers not rendered by the tool, workspace drift"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 570,
+        "wall_clock_s": 15.08
+      }
+    },
+    "7": {
+      "title": "Paginated children of Team Directory",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "The prompt requires explicit pagination with page_size=10 and reporting the number of retrieveBlockChildren calls, which Notion MCP doesn't expose \u2014 the agent acknowledged this capability gap and fell back to notion-fetch, reporting only 3 blocks and 1 call instead of the expected 11 blocks and 2 calls.",
+        "noteworthy_paths": [
+          "Agent correctly identified the capability gap: 'The available Notion MCP tools don't expose a raw retrieveBlockChildren endpoint with explicit page_size pagination'",
+          "notion-fetch returned only 3 blocks (heading + 2 dividers) for Team Directory, not the expected 11 \u2014 underlying page content may differ from seeded state"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 1222,
+        "wall_clock_s": 25.97
+      }
+    },
+    "8": {
+      "title": "List comments on BUG-247",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent called notion-get-comments on the BUG-247 page and returned 12 page-level comments in document order; all 12 are in a single page-level discussion thread (context='page'), the expected CMT01 and CMT02 content is present, and the extra 10 comments appear to be workspace drift from repeated test runs.",
+        "noteworthy_paths": [
+          "Tool returned 12 comments instead of the expected 2 (CMT01, CMT02) \u2014 workspace has accumulated comments from repeated seeding/testing runs"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-get-comments"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 933,
+        "wall_clock_s": 21.97
+      }
+    },
+    "9": {
+      "title": "Resolve a relation property",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent fetched BUG-247, extracted the Related Task URL (https://app.notion.com/p/350e518251f8816dbc28d1ce8d61b0b4), then fetched that page to resolve the title 'Fix async tile loader chunk drop', which matches the expected TASK_FIX_TILE_LOADER.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 405,
+        "wall_clock_s": 27.78
+      }
+    },
+    "10": {
+      "title": "Read to_do checked states",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent fetched the Tomb-3 Level Design page and correctly listed the three to_do items under 'Open issues': 'Lighting pass on angle B \u2014 warm rim' (checked), 'Lighting pass on angle E \u2014 warmer' (checked), and 'Door collider revisit (BUG-248)' (unchecked), all matching the expected content.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 365,
+        "wall_clock_s": 19.36
+      }
+    },
+    "12": {
+      "title": "List databases shared to the integration",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "The agent returned 'Press Contacts' in the list of accessible databases, but per the access-boundary rules DB_PRESS_CONTACTS must not appear as it is not shared with the integration; this is a filtering miss because the Notion MCP search returned it and the agent included it without verifying scope.",
+        "noteworthy_paths": [
+          "First search with query='database' returned empty; second search with query=' ' (space) returned Press Contacts among results \u2014 agent included it without checking access boundary"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 714,
+        "wall_clock_s": 23.49
+      }
+    },
+    "13": {
+      "title": "Search by title \u2014 BUG-247",
+      "difficulty": "L2",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent searched for 'BUG-247' and correctly filtered to only title-matching results ('BUG-247 triage' and 'Verify BUG-247 fix on macOS 14.4'), returning real workspace pages with correct IDs; the BUG-247 database row ('Save-file corruption on macOS') appears in tool results but its title does not contain 'BUG-247', so exclusion is correct per the prompt.",
+        "noteworthy_paths": [
+          "Agent explicitly noted 'remaining results mention BUG-247 in their body content but not in their titles' \u2014 correct semantic filtering"
+        ],
+        "tool_calls": {
+          "complete": 1,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 467,
+        "wall_clock_s": 18.7
+      }
+    },
+    "14": {
+      "title": "Search filtered to databases",
+      "difficulty": "L2",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent found all required databases (Bugs, Tasks, Meeting Notes, and Project Catalog variants) sorted by last_edited_time descending, and Press Contacts does not appear in the result; the extra databases (My Tasks, duplicate Project Catalog entries) are workspace drift and the sort order is correct.",
+        "noteworthy_paths": [
+          "Notion MCP has no native filter=database support; agent worked around by keyword-searching known database names and traversing the page hierarchy \u2014 took 24 tool calls and 124s",
+          "Returned 3 'Project Catalog' databases (350e/351e/352e prefix variants) \u2014 likely linked view duplicates from Projects page"
+        ],
+        "tool_calls": {
+          "complete": 24,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 49,
+        "total_tokens": 5297,
+        "wall_clock_s": 124.71
+      }
+    },
+    "15": {
+      "title": "Open blockers in Bugs",
+      "difficulty": "L2",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent fetched all 7 Bugs rows via notion-fetch and correctly determined that none have Severity=Blocker AND Status\u2208{Open, In Progress}; the result text accurately summarises all 7 bugs with real property values drawn from tool results, and the empty-match answer is correct for the current workspace state (workspace has drifted from the seeded Blocker/Open state).",
+        "noteworthy_paths": [
+          "Attempted to fetch a view URL (view://350e5182-51f8-81b8-8a1e-000c81365954) which errored \u2014 'URL type view not currently supported'; fell back to fetching all individual row pages",
+          "Notion search does not support property-level filtering; agent scanned all 7 rows manually"
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 1852,
+        "total_tokens": 2828,
+        "wall_clock_s": 43.83
+      }
+    },
+    "16": {
+      "title": "Tasks Due in next 14 days (calendar)",
+      "difficulty": "L3",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The agent fetched all 12 task rows, applied the 2026-04-19 to 2026-05-03 date filter manually, and returned exactly 9 rows sorted by Due ascending; excluded rows (Concept review 2026-04-15, Brand-kit handoff 2026-04-17, Lisbon flights 2026-05-15) are correctly excluded, and all owner IDs were resolved via notion-get-users.",
+        "noteworthy_paths": [
+          "Attempted to fetch a pre-built view URL (view://350e5182-51f8-81da-90d9-000c795bdc05) that failed \u2014 fell back to fetching all individual task pages and filtering manually",
+          "Notion MCP lacks native date-range query; agent did manual per-row fetch and filter \u2014 22 complete calls"
+        ],
+        "tool_calls": {
+          "complete": 22,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 245,
+        "total_tokens": 4082,
+        "wall_clock_s": 67.81
+      }
+    },
+    "17": {
+      "title": "Overdue not-Done tasks",
+      "difficulty": "L3",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched all Tasks rows and found exactly TASK_BRAND_KIT (Due 2026-04-17, Status=In Progress) as the sole match; TASK_CONCEPT_REVIEW correctly excluded because Status=Done despite overdue Due; result sorted ascending by Due.",
+        "noteworthy_paths": [
+          "Attempted view:// URL fetch that failed; fell back to fetching individual task pages \u2014 18 total calls",
+          "Resolved Owner user IDs via notion-get-users to return display names"
+        ],
+        "tool_calls": {
+          "complete": 18,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 36,
+        "total_tokens": 4265,
+        "wall_clock_s": 116.69
+      }
+    },
+    "18": {
+      "title": "High-severity macOS bugs",
+      "difficulty": "L3",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found exactly BUG-248 (Severity=High, Platform=macOS, Status\u2260Fixed); BUG-247 has drifted to Severity=Catastrophic and Status=Fixed (workspace drift), so it correctly fails both predicates; result sorted by Filed descending.",
+        "noteworthy_paths": [
+          "BUG-247 excluded due to workspace drift (Severity changed to 'Catastrophic', Status changed to 'Fixed') \u2014 not a grading failure per workspace-drift rule"
+        ],
+        "tool_calls": {
+          "complete": 11,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 28,
+        "total_tokens": 4809,
+        "wall_clock_s": 95.06
+      }
+    },
+    "19": {
+      "title": "Paginated full-Tasks scan",
+      "difficulty": "L3",
+      "category": "search",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Notion MCP does not expose a page_size parameter for queryDatabase or notion-fetch; agent used keyword searches and found only 7 tasks vs the required 12, and could not demonstrate the ceil(12/5)=3 call pagination contract; both total-count and call-count success criteria fail.",
+        "noteworthy_paths": [
+          "notion-fetch and notion-search lack cursor/page_size controls \u2014 capability gap prevents forcing page_size=5 pagination",
+          "1 failed call indicates an attempted paginated fetch that errored; agent resorted to keyword searches as workaround"
+        ],
+        "tool_calls": {
+          "complete": 16,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 44,
+        "total_tokens": 10722,
+        "wall_clock_s": 201.13
+      }
+    },
+    "20": {
+      "title": "Meeting notes mentioning Jared",
+      "difficulty": "L4",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched all Meeting Notes rows and scanned Follow-ups fields for Jared mention segments, returning exactly MTG_BUG247_TRIAGE and MTG_LEADS_SYNC; MTG_TOMB3_REVIEW correctly excluded (mentions Miranda only).",
+        "noteworthy_paths": [
+          "notion-fetch renders Follow-ups rich_text in markdown; agent inferred mention presence from @Jared patterns in the rendered output \u2014 structurally correct for this read-only task"
+        ],
+        "tool_calls": {
+          "complete": 16,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 5762,
+        "total_tokens": 4226,
+        "wall_clock_s": 64.01
+      }
+    },
+    "21": {
+      "title": "Press Contacts visibility",
+      "difficulty": "L3",
+      "category": "search",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Access boundary violation \u2014 notion-search returned DB_PRESS_CONTACTS and notion-fetch successfully retrieved its schema; per workspace_state \u00a73.2 + \u00a710.5 the integration is not shared to DB_PRESS_CONTACTS and all API calls should return object_not_found.",
+        "noteworthy_paths": [
+          "Search returned DB_PRESS_CONTACTS despite the integration not being shared \u2014 Notion MCP scope enforcement gap",
+          "Agent did not fabricate row content but did expose the schema, which is opaque to the integration per \u00a75.5"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 424,
+        "wall_clock_s": 24.28
+      }
+    },
+    "22": {
+      "title": "Five most recently edited pages",
+      "difficulty": "L2",
+      "category": "search",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent returned exactly 5 pages sorted by last_edited_time descending via notion-search; all returned pages are integration-scoped entities from workspace_state \u00a74; non-shared pages P08_LEADS_ONLY and P11_LEADS_NOTES do not appear.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 1,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search"
+        ],
+        "initial_context": 3,
+        "peak_context": 11,
+        "total_tokens": 929,
+        "wall_clock_s": 22.63
+      }
+    },
+    "23": {
+      "title": "Append a paragraph to Tomb-3",
+      "difficulty": "L1",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent appended a paragraph block with text 'Reviewed: 2026-04-19' to P04_TOMB3 using notion-update-page; all 3 calls completed without failure and the block appears after all pre-existing \u00a76.1 blocks.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 584,
+        "wall_clock_s": 20.5
+      }
+    },
+    "24": {
+      "title": "Mark BUG-247 Fixed",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "BUG-247 Status was already 'Fixed' due to workspace drift from prior runs; agent verified via notion-fetch and correctly reported the idempotent outcome without making a spurious update; post-condition Status=Fixed is satisfied.",
+        "noteworthy_paths": [
+          "No notion-update-page call made \u2014 BUG-247 already had Status=Fixed (workspace drift); idempotent behavior is correct"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 318,
+        "wall_clock_s": 10.66
+      }
+    },
+    "25": {
+      "title": "Re-assign BUG-248 to Devon",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "BUG-248 Assignee was already Devon Park due to workspace drift; agent resolved Devon's user_id via notion-get-users, verified via notion-fetch, and correctly reported the idempotent outcome without a spurious update; post-condition Assignee=Devon is satisfied.",
+        "noteworthy_paths": [
+          "No notion-update-page call made \u2014 BUG-248 already assigned to Devon Park (workspace drift); idempotent behavior is correct"
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 755,
+        "wall_clock_s": 21.69
+      }
+    },
+    "26": {
+      "title": "Edit a paragraph block keeping a mention",
+      "difficulty": "L3",
+      "category": "write",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Agent could not locate block B02 by its workspace_state block-id (notion-fetch renders markdown without exposing individual block IDs), so no update was made; the absence of a notion-update-page call confirms the required mutation never occurred.",
+        "noteworthy_paths": [
+          "notion-fetch renders page content as markdown \u2014 individual block IDs are not exposed, making targeted block updates impossible",
+          "Mention preservation is also a concern: notion-update-page accepts markdown input which cannot encode structured mention.user segments"
+        ],
+        "tool_calls": {
+          "complete": 5,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 21,
+        "total_tokens": 5456,
+        "wall_clock_s": 108.98
+      }
+    },
+    "27": {
+      "title": "Check off a to_do",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The 'Lighting pass on angle E \u2014 warmer' to_do (B09) was already checked due to workspace drift from prior runs; agent verified via notion-fetch and reported the idempotent outcome; post-condition B09.checked=true is satisfied.",
+        "noteworthy_paths": [
+          "No notion-update-page call made \u2014 B09 already had checked=true (workspace drift); idempotent behavior is correct"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 731,
+        "wall_clock_s": 17.08
+      }
+    },
+    "28": {
+      "title": "Delete a divider block",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Agent fetched Tomb-3 content but notion-fetch renders pages as markdown which does not expose individual block IDs; without being able to identify and target B13 by block-id, no deletion was attempted \u2014 no notion-update-page call was made.",
+        "noteworthy_paths": [
+          "notion-fetch markdown rendering hides block-level IDs \u2014 block deletion requires targeting by id which is not available via this MCP tool",
+          "Notion MCP has no explicit block-delete endpoint; deletion would require updateBlock with archived=true, but block IDs are not accessible"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 908,
+        "wall_clock_s": 20.76
+      }
+    },
+    "29": {
+      "title": "Archive a stale page",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent called notion-update-page on P09_PLAYTEST_A2, but Notion MCP's notion-update-page may not pass through the archived=true property to the underlying API; all 3 calls completed without error, but it is unclear whether the archived flag was actually set or silently dropped.",
+        "noteworthy_paths": [
+          "notion-update-page accepted the call (0 failed) but the Notion MCP tool schema may not expose the 'archived' property \u2014 write appeared to succeed without confirmation of archived state"
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-update-page",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 1564,
+        "wall_clock_s": 39.44
+      }
+    },
+    "30": {
+      "title": "Comment on BUG-247",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found BUG-247 via notion-search and posted 'Verified fix on macOS 14.4 \u2014 closing.' as a page-level comment via notion-create-comment; both calls completed without failure.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-create-comment"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 356,
+        "wall_clock_s": 12.67
+      }
+    },
+    "31": {
+      "title": "Comment on a specific block",
+      "difficulty": "L3",
+      "category": "write",
+      "notion": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent fetched Tomb-3 block children to identify the callout block and posted a comment via notion-create-comment; however, Notion MCP's notion-create-comment likely posts at page level rather than targeting a specific block_id, so the success criterion requiring parent.block_id == B11 is likely not met.",
+        "noteworthy_paths": [
+          "notion-create-comment in Notion MCP may not support block-level parent targeting \u2014 the comment was likely created as a page-level comment on P04_TOMB3 rather than on B11 specifically"
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-create-comment"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 5527,
+        "wall_clock_s": 88.65
+      }
+    },
+    "32": {
+      "title": "Add a select option to Bugs.Severity",
+      "difficulty": "L3",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "'Investigating' already exists in the Bugs Severity options due to workspace drift from prior runs; agent verified via notion-fetch and correctly reported the idempotent outcome without making a spurious schema update; post-condition (Investigating \u2208 Severity options) is satisfied.",
+        "noteworthy_paths": [
+          "No notion-update-data-source call made \u2014 'Investigating' option already present (workspace drift); idempotent behavior is correct"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 463,
+        "wall_clock_s": 13.12
+      }
+    },
+    "33": {
+      "title": "Rename Projects (catalog) database",
+      "difficulty": "L2",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found DB_PROJECTS via notion-search and renamed it to 'Project Catalog' via notion-update-data-source; both calls completed without failure.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-update-data-source"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 294,
+        "wall_clock_s": 16.14
+      }
+    },
+    "34": {
+      "title": "Create a new task",
+      "difficulty": "L3",
+      "category": "write",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent resolved Pinkman's user_id via notion-get-users and created 'Smoke test on Switch build' in DB_TASKS with all required properties (Owner=U03PINKMAN, Due=2026-04-25, Status='Up Next', Priority='P1') via notion-create-pages; all 4 calls completed without failure.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users",
+          "notion-create-pages"
+        ],
+        "initial_context": 3,
+        "peak_context": 16,
+        "total_tokens": 712,
+        "wall_clock_s": 31.89
+      }
+    },
+    "35": {
+      "title": "Unarchive Playtest \u2014 alpha round 3",
+      "difficulty": "L3",
+      "category": "workflow",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Archived pages do not appear in notion-search results; agent searched and fetched but could not locate P10_PLAYTEST_A3, so no unarchive was attempted \u2014 no notion-update-page call was made; the capability gap (no way to address a trashed page without its ID) prevented completion.",
+        "noteworthy_paths": [
+          "notion-search does not return archived/trashed pages \u2014 agent cannot find P10_PLAYTEST_A3 to target it for unarchiving",
+          "No direct 'restore from trash' tool available in Notion MCP"
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 2821,
+        "wall_clock_s": 58.9
+      }
+    },
+    "36": {
+      "title": "Rename Bugs.Filed property",
+      "difficulty": "L3",
+      "category": "workflow",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "The 'Filed' property was already renamed to 'Reported' due to workspace drift from prior runs; agent verified via notion-fetch and found the property already correctly named; idempotent outcome satisfies the post-condition.",
+        "noteworthy_paths": [
+          "No notion-update-data-source call made \u2014 'Reported' property already present (workspace drift from prior rename); idempotent behavior is correct"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 512,
+        "wall_clock_s": 15.85
+      }
+    },
+    "37": {
+      "title": "Update Bugs database description",
+      "difficulty": "L2",
+      "category": "workflow",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found DB_BUGS via notion-search, fetched current schema, and updated the description to 'Bugs across all platforms \u2014 last reviewed 2026-04-19.' via notion-update-data-source; all 3 calls completed without failure.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-data-source"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 407,
+        "wall_clock_s": 14.12
+      }
+    },
+    "38": {
+      "title": "Set page icon",
+      "difficulty": "L2",
+      "category": "workflow",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found P04_TOMB3 via notion-search and set its icon to \u26f0\ufe0f via notion-update-page; both calls completed without failure, replacing the baseline \ud83d\uddff icon.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 372,
+        "wall_clock_s": 11.0
+      }
+    },
+    "39": {
+      "title": "Convert paragraph to heading_2 (delete + append)",
+      "difficulty": "L4",
+      "category": "workflow",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Agent could not locate block B36 by its workspace_state block-id (notion-fetch renders markdown without exposing individual block IDs), so the required delete step failed; 1 failed call confirms an error during the attempted update; the delete+append sequence required by the API's block-type immutability constraint was not completed.",
+        "noteworthy_paths": [
+          "notion-fetch hides block-level IDs in markdown output \u2014 targeted block deletion requires block_id which is not available",
+          "Block-type mutation is unsupported by the Notion API; the delete+append pattern was the correct approach but failed at the delete step"
+        ],
+        "tool_calls": {
+          "complete": 7,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 29,
+        "total_tokens": 4619,
+        "wall_clock_s": 89.61
+      }
+    },
+    "40": {
+      "title": "Append a nested toggle to Launch 2026",
+      "difficulty": "L3",
+      "category": "workflow",
+      "notion": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent appended a toggle block titled 'Risks' to P05_LAUNCH26 via notion-update-page, but the Notion MCP tool likely does not support specifying nested children inline in a single call; the 3 bulleted_list_item children of the toggle were likely not nested under it, failing success criteria item 2.",
+        "noteworthy_paths": [
+          "appendBlockChildren supports 2 levels of nesting per call, but notion-update-page markdown input may not encode toggle children \u2014 separate call on toggle's id would be needed for nested content"
+        ],
+        "tool_calls": {
+          "complete": 4,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 17,
+        "total_tokens": 643,
+        "wall_clock_s": 22.62
+      }
+    },
+    "41": {
+      "title": "Bulk-update overdue tasks",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found exactly TASK_BRAND_KIT (Due 2026-04-17, Status=In Progress) as the sole overdue non-Done task, updated its Priority to 'P0' via notion-update-page, and posted 'Overdue \u2014 please update status' via notion-create-comment; TASK_CONCEPT_REVIEW correctly excluded (Status=Done); all 17 calls completed without failure.",
+        "noteworthy_paths": [
+          "17 calls for a single targeted row reflects fan-out: scanning all 12 Task rows then writing 2 operations on the match"
+        ],
+        "tool_calls": {
+          "complete": 17,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page",
+          "notion-create-comment"
+        ],
+        "initial_context": 3,
+        "peak_context": 2390,
+        "total_tokens": 4209,
+        "wall_clock_s": 57.34
+      }
+    },
+    "42": {
+      "title": "Spin up a new bug end-to-end",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent completed all 3 steps: created BUG-249 row with correct properties (Title, Bug ID, Severity=High, Status=Open, Reporter=U03PINKMAN, Platform=macOS) via notion-create-pages; appended 'Logs: see CI run #843.' paragraph via notion-update-page; posted 'Tagging Devon to investigate.' comment via notion-create-comment; all 6 calls succeeded.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users",
+          "notion-create-pages",
+          "notion-update-page",
+          "notion-create-comment"
+        ],
+        "initial_context": 3,
+        "peak_context": 20,
+        "total_tokens": 1213,
+        "wall_clock_s": 28.38
+      }
+    },
+    "43": {
+      "title": "Cross-database link",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found BUG-248, created 'Investigate BUG-248 collider' task with Devon as Owner, Tags=[eng,qa], Project=Tomb-3, Due=2026-04-23 via notion-create-pages, then updated BUG-248's Related Task relation via notion-update-page; all 18 calls completed without failure.",
+        "noteworthy_paths": [
+          "peak_context=13557 reflects large data scan across multiple databases to resolve PROJ_TOMB3 row-id for the Project relation"
+        ],
+        "tool_calls": {
+          "complete": 18,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users",
+          "notion-create-pages",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 13557,
+        "total_tokens": 7224,
+        "wall_clock_s": 107.34
+      }
+    },
+    "44": {
+      "title": "Weekly digest page",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent computed the 3 statistics (0 blocker bugs in workspace's drifted state, 9 tasks in 2026-04-19..2026-05-03 window, 1 overdue non-Done task) and created 'Weekly Digest 2026-04-19' as a child of Meeting Notes with heading_1 and 3 bullets; the 2 failed calls were view:// URL fetch attempts, not write failures.",
+        "noteworthy_paths": [
+          "2 failed calls from view:// URL fetch attempts \u2014 agent fell back to direct database queries",
+          "Workspace drift (BUG-247 now Catastrophic/Fixed) means 0 blocker bugs found \u2014 not a grading failure per workspace-drift rule"
+        ],
+        "tool_calls": {
+          "complete": 21,
+          "failed": 2,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 7784,
+        "total_tokens": 10968,
+        "wall_clock_s": 154.57
+      }
+    },
+    "45": {
+      "title": "Catch-up sweep on overdue In-Progress tasks",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent found exactly TASK_BRAND_KIT (Due -2d, Status=In Progress) as the sole match, set its Status='Done' via notion-update-page, then appended 'Catch-up sweep: 1 overdue tasks closed on 2026-04-19.' to Tomb-3; TASK_CONCEPT_REVIEW correctly excluded (Status=Done baseline).",
+        "noteworthy_paths": [
+          "Agent attempted notion-create-view and notion-update-view to build a filtered view \u2014 these failed (1 failed call); fell back to direct query; view config is not exposed by the Notion API per benchmark unavailable_via_api"
+        ],
+        "tool_calls": {
+          "complete": 24,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-create-view",
+          "notion-update-page",
+          "notion-update-view"
+        ],
+        "initial_context": 3,
+        "peak_context": 56,
+        "total_tokens": 6614,
+        "wall_clock_s": 130.27
+      }
+    },
+    "46": {
+      "title": "Meeting note from a template",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PARTIAL",
+        "reasoning": "Agent created the meeting note row with correct Title, Date, Attendees, Type, Action Items relation, and appended the 3 child blocks; however, the Follow-ups field's @Miranda and @Tomb-3 Level Design references were written as plain text via notion-update-page's markdown input rather than structured mention.user and mention.page segments, failing the mention assertion per grading_notes_global.",
+        "noteworthy_paths": [
+          "notion-update-page accepts markdown text; structured mention.user and mention.page segments cannot be encoded in markdown \u2014 MCP capability gap for rich_text mention creation",
+          "1 failed call during the 13-call sequence; all structural criteria (title, date, attendees, blocks) were met"
+        ],
+        "tool_calls": {
+          "complete": 13,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users",
+          "notion-create-pages",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 41,
+        "total_tokens": 14150,
+        "wall_clock_s": 207.52
+      }
+    },
+    "47": {
+      "title": "Mention round-up across meetings",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent fetched all Meeting Notes rows with Date >= 2026-03-20 and identified Miranda and Jared mention segments across MTG_TOMB3_REVIEW, MTG_BUG247_TRIAGE, MTG_LAUNCH_STANDUP, MTG_LEADS_SYNC, and MTG_ALL_HANDS; returned Title, Date, mentioned names, and count sorted by Date descending; all 23 calls completed without failure.",
+        "noteworthy_paths": [
+          "23 calls to scan all Meeting Notes rows and fetch each page's Follow-ups property individually"
+        ],
+        "tool_calls": {
+          "complete": 23,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 47,
+        "total_tokens": 6535,
+        "wall_clock_s": 104.2
+      }
+    },
+    "48": {
+      "title": "Archive sweep under Playtest Archive",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Agent made 0 tool calls \u2014 it generated a long text response (peak_context=138, 12905 tokens) without invoking any Notion MCP tools; P09_PLAYTEST_A2 was not archived and no children of P07_PLAYTEST_ARCHIVE were identified via the API.",
+        "noteworthy_paths": [
+          "0 tool calls despite a multi-step orchestration task \u2014 agent may have failed to resolve P07_PLAYTEST_ARCHIVE to a page ID and responded with fabricated or hallucinated output instead"
+        ],
+        "tool_calls": {
+          "complete": 0,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [],
+        "initial_context": 3,
+        "peak_context": 138,
+        "total_tokens": 12905,
+        "wall_clock_s": 187.51
+      }
+    },
+    "49": {
+      "title": "Comment fan-out on blocker bugs",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent queried Bugs for Severity=Blocker AND Status\u2260Fixed; under the current workspace state BUG-247 has drifted to Catastrophic/Fixed, leaving 0 matching rows; agent correctly found no targets and posted no comments; 1 failed call was a view:// URL fetch attempt.",
+        "noteworthy_paths": [
+          "BUG-247 drifted from Blocker/Open to Catastrophic/Fixed (workspace drift) \u2014 0 matching rows is correct for current state; not a grading failure per workspace-drift rule"
+        ],
+        "tool_calls": {
+          "complete": 13,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 38,
+        "total_tokens": 3024,
+        "wall_clock_s": 53.4
+      }
+    },
+    "50": {
+      "title": "End-to-end launch-prep",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent identified all 5 launch-blocker non-Done tasks (TASK_FIX_TILE_LOADER, TASK_PRESS_LIST, TASK_TRAILER_COPY, TASK_BUG247_VERIFY, TASK_QA_REGRESSION), posted the verbatim comment on each via notion-create-comment, and appended heading_2 + 5 bulleted_list_items to P05_LAUNCH26 via notion-update-page; 1 failed call was a view:// URL attempt.",
+        "noteworthy_paths": [
+          "30 calls for 5-target fan-out: per-task comment + Launch 2026 block append",
+          "1 failed call from view:// URL fetch; fell back to direct database query"
+        ],
+        "tool_calls": {
+          "complete": 30,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-get-users",
+          "notion-create-comment",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 58,
+        "total_tokens": 7206,
+        "wall_clock_s": 124.8
+      }
+    },
+    "51": {
+      "title": "Read a non-shared page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Access boundary violation \u2014 notion-search returned P08_LEADS_ONLY and notion-fetch successfully retrieved its content; per workspace_state \u00a73.2 + \u00a710.5 the integration is not shared to P08_LEADS_ONLY and all API calls should return object_not_found.",
+        "noteworthy_paths": [
+          "Search returned P08_LEADS_ONLY ('\ud83d\udd12 Leads-only') despite the integration not being shared \u2014 Notion MCP scope enforcement gap"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 12,
+        "total_tokens": 346,
+        "wall_clock_s": 12.44
+      }
+    },
+    "52": {
+      "title": "Write to an archived page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "P10_PLAYTEST_A3 is archived/in_trash and does not appear in notion-search results; agent spent 15 calls searching and fetching but could not locate the page, and never attempted nor reported the required validation_error from an appendBlockChildren call on a trashed page.",
+        "noteworthy_paths": [
+          "notion-search does not return archived/trashed pages \u2014 agent could not find P10_PLAYTEST_A3 to target it",
+          "No notion-update-page call made; success criterion requires reporting validation_error from the attempted write"
+        ],
+        "tool_calls": {
+          "complete": 15,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 49,
+        "total_tokens": 5063,
+        "wall_clock_s": 133.28
+      }
+    },
+    "53": {
+      "title": "Property-type violation",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent attempted to set TASK_FIX_TILE_LOADER Estimate='about a week' via notion-update-page (1 failed call = validation_error on the number property) and correctly reported the type mismatch; TASK_FIX_TILE_LOADER.Estimate remains at its baseline value.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 14,
+        "total_tokens": 559,
+        "wall_clock_s": 23.17
+      }
+    },
+    "54": {
+      "title": "Query a non-shared database",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Access boundary violation \u2014 notion-search returned DB_PRESS_CONTACTS and subsequent notion-fetch calls retrieved its schema details; per workspace_state \u00a73.2 + \u00a75.5 + \u00a710.5 the database is not shared and all API calls should return object_not_found; no row content was fabricated but the schema was exposed.",
+        "noteworthy_paths": [
+          "6 calls across search + multiple fetches \u2014 agent was able to access and inspect the schema of a non-shared database"
+        ],
+        "tool_calls": {
+          "complete": 6,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 22,
+        "total_tokens": 1622,
+        "wall_clock_s": 38.1
+      }
+    },
+    "55": {
+      "title": "Resolve a revoked user",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "Agent called notion-get-users (listUsers) and correctly determined Ember Shah was absent from the active user list per workspace_state \u00a710.3 (revoked users are excluded from listUsers); reported her as not an active workspace member.",
+        "noteworthy_paths": [],
+        "tool_calls": {
+          "complete": 1,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-get-users"
+        ],
+        "initial_context": 3,
+        "peak_context": 10,
+        "total_tokens": 191,
+        "wall_clock_s": 12.21
+      }
+    },
+    "56": {
+      "title": "Append to a non-shared page",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Access boundary violation \u2014 notion-search returned P08_LEADS_ONLY and notion-fetch successfully read it; the attempted notion-update-page append failed (1 failed call), but the read access itself violates the integration boundary per workspace_state \u00a73.2 + \u00a710.5.",
+        "noteworthy_paths": [
+          "Write was ultimately rejected (1 failed call on notion-update-page), but search and fetch both succeeded against a non-shared page \u2014 scope enforcement gap for reads"
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 1,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch",
+          "notion-update-page"
+        ],
+        "initial_context": 3,
+        "peak_context": 18,
+        "total_tokens": 2862,
+        "wall_clock_s": 53.25
+      }
+    },
+    "57": {
+      "title": "Pagination boundary at exact page_size",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "FAIL",
+        "reasoning": "Notion MCP's notion-fetch does not expose a page_size parameter for block children; agent could not issue a page_size=11 retrieveBlockChildren call, so it cannot report has_more=false or verify the pagination boundary at exactly 11 children per workspace_state \u00a710.7.",
+        "noteworthy_paths": [
+          "notion-fetch is a catch-all GET tool without cursor/page_size controls \u2014 pagination boundary testing is not possible via Notion MCP"
+        ],
+        "tool_calls": {
+          "complete": 2,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 13,
+        "total_tokens": 1275,
+        "wall_clock_s": 27.24
+      }
+    },
+    "58": {
+      "title": "Update with a non-existent select option",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "notion": {
+        "verdict": "PASS",
+        "reasoning": "'Catastrophic' was already present in DB_BUGS Severity options due to workspace drift from prior runs; agent updated BUG-247's Severity to 'Catastrophic' successfully (no validation_error since the option exists); workspace drift means the expected validation_error scenario no longer applies \u2014 correct behavior for current state.",
+        "noteworthy_paths": [
+          "'Catastrophic' option added to Severity schema by prior test runs (workspace drift) \u2014 the option now exists, so the update succeeds without error; verdict not lowered per workspace-drift rule"
+        ],
+        "tool_calls": {
+          "complete": 3,
+          "failed": 0,
+          "partial": 0
+        },
+        "tools_invoked": [
+          "notion-search",
+          "notion-fetch"
+        ],
+        "initial_context": 3,
+        "peak_context": 15,
+        "total_tokens": 1361,
+        "wall_clock_s": 31.8
+      }
+    }
+  },
+  "aggregates": {
+    "notion": {
+      "n": 56,
+      "pass": 38,
+      "partial": 4,
+      "fail": 14,
+      "error": 0,
+      "success_rate": 0.6785714285714286,
+      "avg_initial_context": 3,
+      "avg_peak_context": 584.5714285714286,
+      "avg_wall_clock_s": 55.03803571428571,
+      "total_tokens": 158967,
+      "avg_tool_calls": 7.339285714285714,
+      "total_tool_failures": 12
+    }
+  },
+  "breakdowns": {
+    "by_difficulty": {
+      "L1": {
+        "n": 3,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      },
+      "L2": {
+        "n": 23,
+        "success_rate": 0.6956521739130435,
+        "partial": 1,
+        "fail": 6,
+        "error": 0
+      },
+      "L3": {
+        "n": 18,
+        "success_rate": 0.5555555555555556,
+        "partial": 2,
+        "fail": 6,
+        "error": 0
+      },
+      "L4": {
+        "n": 7,
+        "success_rate": 0.5714285714285714,
+        "partial": 1,
+        "fail": 2,
+        "error": 0
+      },
+      "L5": {
+        "n": 5,
+        "success_rate": 1.0,
+        "partial": 0,
+        "fail": 0,
+        "error": 0
+      }
+    },
+    "by_category": {
+      "retrieval": {
+        "n": 10,
+        "success_rate": 0.8,
+        "partial": 0,
+        "fail": 2,
+        "error": 0
+      },
+      "search": {
+        "n": 10,
+        "success_rate": 0.8,
+        "partial": 0,
+        "fail": 2,
+        "error": 0
+      },
+      "write": {
+        "n": 12,
+        "success_rate": 0.6666666666666666,
+        "partial": 2,
+        "fail": 2,
+        "error": 0
+      },
+      "workflow": {
+        "n": 6,
+        "success_rate": 0.5,
+        "partial": 1,
+        "fail": 2,
+        "error": 0
+      },
+      "orchestration": {
+        "n": 10,
+        "success_rate": 0.8,
+        "partial": 1,
+        "fail": 1,
+        "error": 0
+      },
+      "edge_case": {
+        "n": 8,
+        "success_rate": 0.375,
+        "partial": 0,
+        "fail": 5,
+        "error": 0
+      }
+    }
+  }
+}
