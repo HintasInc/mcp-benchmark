@@ -1,6 +1,21 @@
 # MCP Benchmark
 
-**Official platform MCPs vs MCPs by [Hintas](https://hintas.com) — head-to-head, on the same prompts, against mirrored workspaces.**
+<p align="center">
+  <a href="https://hintas.com">
+    <img src="./assets/hintas-banner.png" alt="Hintas" width="720" />
+  </a>
+</p>
+
+<p align="center">
+  <strong>Official platform MCPs vs MCPs by <a href="https://hintas.com">Hintas</a> — head-to-head, on the same prompts, against mirrored workspaces.</strong>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0" /></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-%E2%89%A53.10-3776AB.svg?logo=python&logoColor=white" alt="Python ≥3.10" /></a>
+  <a href="#experiments-and-results"><img src="https://img.shields.io/badge/platforms-Slack%20%7C%20Notion-7C3AED.svg" alt="Platforms: Slack | Notion" /></a>
+  <a href="https://hintas.com"><img src="https://img.shields.io/badge/hintas.com-000000.svg?logo=safari&logoColor=white" alt="hintas.com" /></a>
+</p>
 
 ---
 
@@ -16,7 +31,7 @@ Each platform was run head-to-head over a fixed prompt suite (48 prompts for Sla
 | :------------- | -------------------: | -----------------: | --------------------: |
 | Success rate   |                  23% |                77% |             +54.2 pp  |
 | Speed          |               16.9 s |             44.2 s |              +27.2 s  |
-| Tokens         |                  590 |              1,669 |               +1,079  |
+| Tokens         |                4,132 |             11,684 |               +7,552  |
 
 Full report: [experiments/slack/results.md](experiments/slack/results.md)
 
@@ -26,7 +41,7 @@ Full report: [experiments/slack/results.md](experiments/slack/results.md)
 | :------------- | --------------------: | ------------------: | --------------------: |
 | Success rate   |                   68% |                 80% |             +12.5 pp  |
 | Speed          |                45.4 s |              48.2 s |               +2.8 s  |
-| Tokens         |                 2,233 |               2,126 |                 −107  |
+| Tokens         |                78,172 |              74,411 |               −3,761  |
 
 Full report: [experiments/notion/results.md](experiments/notion/results.md)
 
@@ -63,4 +78,8 @@ For the harness internals — pipeline subcommands, output layout, manifest sche
 
 ---
 
+<div align="center">
+
 Built by **[Hintas](https://hintas.com)**
+
+</div>
