@@ -7,7 +7,7 @@ dirs (one for the platform's baseline stack, one for the variant stack) and
 asks the LLM grader to compare them.
 
 Workflow:
-  1. Resolve which run directories to grade (--all under platforms/<platform>/runs/
+  1. Resolve which run directories to grade (--all under experiments/<platform>/runs/
      when there are exactly two dirs, or an explicit --runs <a> <b>).
   2. Read each run dir's results.json to identify which stack lives there.
      Verify the pair is exactly {baseline, variant}.
@@ -23,7 +23,7 @@ Workflow:
 Usage:
     uv run benchmark final --platform slack --all
     uv run benchmark final --platform notion \\
-        --runs platforms/notion/runs/20260428_2354__notion platforms/notion/runs/20260428_2400__hintas
+        --runs experiments/notion/runs/20260428_2354__notion experiments/notion/runs/20260428_2400__hintas
 """
 from __future__ import annotations
 
@@ -56,16 +56,16 @@ def section(title: str) -> None:
 def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--platform", default="slack",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: slack)")
+                   help="Platform manifest under experiments/ (default: slack)")
     p.add_argument("--runs", nargs="+", type=Path,
                    help="Two run directories (baseline + variant). "
                         "Mutually exclusive with --all.")
     p.add_argument("--all", action="store_true",
-                   help="Grade every run directory under platforms/<platform>/runs/. "
+                   help="Grade every run directory under experiments/<platform>/runs/. "
                         "Requires exactly two dirs to be present.")
     p.add_argument("--output-dir", type=Path,
                    help="Where to write final_analysis.{json,md}. "
-                        "Default: platforms/<platform>/final/<timestamp>/")
+                        "Default: experiments/<platform>/final/<timestamp>/")
     p.add_argument("--prompts-file", default=str(platform.prompts_file),
                    help="Override the prompts file used by precompute.")
     p.add_argument("--timeout", type=int, default=3600,

@@ -3,7 +3,7 @@
 Everything in this subpackage turns raw benchmark logs into graded reports. Three pipelines live here, all driven through `benchmark` subcommands:
 
 1. **Per-run grading** (`benchmark analyze`) — score a single stack's run against the rubric, producing `analysis.json` + `analysis.md` inside the run dir.
-2. **Cross-stack final analysis (LLM)** (`benchmark final`) — compare exactly two graded run dirs (baseline vs. variant) and write `final_analysis.{json,md}` under `platforms/<platform>/final/<timestamp>/`.
+2. **Cross-stack final analysis (LLM)** (`benchmark final`) — compare exactly two graded run dirs (baseline vs. variant) and write `final_analysis.{json,md}` under `experiments/<platform>/final/<timestamp>/`.
 3. **Deterministic comparisons** (`benchmark aggregate`, `benchmark combine`) — same shape as the LLM driver but trust the per-run verdicts on disk.
 
 All three pipelines share `precompute.py`, which converts the raw `session.log` + `token_trace.json` files in a run dir into a clean `analysis_data.json` blob the grader consumes. It is invoked automatically by the per-run and final drivers; expose it as `benchmark precompute` for ad-hoc use.
@@ -35,7 +35,7 @@ src/benchmarking/analysis/
 
 ## Step-by-step: per-run grading
 
-You have one run dir under `platforms/<platform>/runs/<timestamp>__<stack>/` and want `analysis.md`.
+You have one run dir under `experiments/<platform>/runs/<timestamp>__<stack>/` and want `analysis.md`.
 
 1. **(Optional) Grade as part of the benchmark run.** Pass `--analyze` to `benchmark run` and the per-run analyzer fires automatically once Phase 3 finishes:
    ```bash
@@ -45,13 +45,13 @@ You have one run dir under `platforms/<platform>/runs/<timestamp>__<stack>/` and
    ```bash
    uv run benchmark analyze \
        --platform slack \
-       --runs platforms/slack/runs/<timestamp>__slack
+       --runs experiments/slack/runs/<timestamp>__slack
    ```
-   Use `--all` instead of `--runs` to grade every dir under `platforms/<platform>/runs/`.
+   Use `--all` instead of `--runs` to grade every dir under `experiments/<platform>/runs/`.
 3. **Iterate cheaply.** Re-running the command resumes from `per_prompt_analysis/`; only un-graded prompts are sent to Claude. Add `--prompt-ids 1,2,5` to focus on a subset, `--regrade` to force re-grading.
 4. **Re-render the markdown only.** If you tweak `render_md.py`, regenerate without re-grading:
    ```bash
-   uv run python -m benchmarking.analysis.per_run.render_md platforms/slack/runs/<timestamp>__slack
+   uv run python -m benchmarking.analysis.per_run.render_md experiments/slack/runs/<timestamp>__slack
    ```
 
 ## Step-by-step: cross-stack final analysis (LLM)
@@ -62,17 +62,17 @@ You have two run dirs already graded (each has `analysis.json`) — one baseline
    ```bash
    uv run benchmark final \
        --platform slack \
-       --runs platforms/slack/runs/<timestamp>__slack \
-              platforms/slack/runs/<timestamp>__hintas__topk10_batch-off_max5_rag-off
+       --runs experiments/slack/runs/<timestamp>__slack \
+              experiments/slack/runs/<timestamp>__hintas__topk10_batch-off_max5_rag-off
    ```
-   Or use `--all` when `platforms/<platform>/runs/` holds exactly two dirs:
+   Or use `--all` when `experiments/<platform>/runs/` holds exactly two dirs:
    ```bash
    uv run benchmark final --platform slack --all
    ```
-2. **Output lands at** `platforms/<platform>/final/<timestamp>/final_analysis.{json,md}`. The driver auto-precomputes `analysis_data.json` for any run dir missing it.
+2. **Output lands at** `experiments/<platform>/final/<timestamp>/final_analysis.{json,md}`. The driver auto-precomputes `analysis_data.json` for any run dir missing it.
 3. **Re-render only.** If `final_analysis.json` exists but the markdown is stale:
    ```bash
-   uv run python -m benchmarking.analysis.final.render_final_md platforms/slack/final/<timestamp>
+   uv run python -m benchmarking.analysis.final.render_final_md experiments/slack/final/<timestamp>
    ```
 
 ## Step-by-step: deterministic alternatives (no LLM)
@@ -82,18 +82,18 @@ Use these when you trust the per-run verdicts on disk and want to skip the LLM g
 - **Two-stack comparison** — same shape as the LLM driver:
   ```bash
   uv run benchmark aggregate --platform slack --all
-  uv run python -m benchmarking.analysis.final.render_final_md platforms/slack/final/<timestamp>
+  uv run python -m benchmarking.analysis.final.render_final_md experiments/slack/final/<timestamp>
   ```
 - **N-way comparison** (1 baseline + N variants, e.g. several Hintas configs):
   ```bash
   uv run benchmark combine \
       --platform notion \
-      --baseline platforms/notion/runs/<ts>__notion \
-      --variants platforms/notion/runs/<ts>__hintas__<paramsA> \
-                 platforms/notion/runs/<ts>__hintas__<paramsB> \
-                 platforms/notion/runs/<ts>__hintas__<paramsC>
+      --baseline experiments/notion/runs/<ts>__notion \
+      --variants experiments/notion/runs/<ts>__hintas__<paramsA> \
+                 experiments/notion/runs/<ts>__hintas__<paramsB> \
+                 experiments/notion/runs/<ts>__hintas__<paramsC>
   ```
-  Output: `platforms/<platform>/final/<timestamp>/combined_comparison.md`.
+  Output: `experiments/<platform>/final/<timestamp>/combined_comparison.md`.
 
 ## Adding a new platform
 
@@ -101,6 +101,6 @@ Use these when you trust the per-run verdicts on disk and want to skip the LLM g
 
 ## Path conventions
 
-- Run output (gitignored under `platforms/<platform>/runs/`, `platforms/<platform>/final/`) is rooted at the platform directory. Drivers receive that directory as `Platform.root` from the manifest loader.
+- Run output (gitignored under `experiments/<platform>/runs/`, `experiments/<platform>/final/`) is rooted at the platform directory. Drivers receive that directory as `Platform.root` from the manifest loader.
 - Grading prompts and platform notes are package data — `analysis_prompt.md`, `final_analysis_prompt.md`, and `notes/notes_<platform>.md` are resolved against `ANALYSIS_DIR = Path(__file__).parent`. Editing them means editing the source tree.
 - The `analysis.prompt_template` field in each platform TOML is now relative to `src/benchmarking/analysis/` (e.g. `per_run/analysis_prompt.md`), not the repo root.

@@ -13,10 +13,8 @@ __pycache__/
 .claude/settings.local.json
 **/*.local.json
 
-# Benchmark outputs (anchored to platforms/ so we don't accidentally ignore
+# Benchmark outputs (anchored to experiments/ so we don't accidentally ignore
 # src/benchmarking/analysis/final/, etc.)
-/platforms/*/runs/**
-!/platforms/*/runs/**/
-!/platforms/*/runs/**/analysis.json
-!/platforms/*/runs/**/analysis.md
+/experiments/*/runs/**
+!/experiments/*/runs/**/analysis.md
 /archive/

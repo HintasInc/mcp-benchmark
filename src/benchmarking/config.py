@@ -1,8 +1,8 @@
 """
 Platform manifest loader.
 
-Each platform (slack, discord, …) lives under `platforms/<name>/` with its
-manifest at `platforms/<name>/<name>.toml`. Adding a new platform is purely
+Each platform (slack, discord, …) lives under `experiments/<name>/` with its
+manifest at `experiments/<name>/<name>.toml`. Adding a new platform is purely
 data: no code changes in the orchestrator scripts.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ def load_platform_env(platform_name: str) -> list[Path]:
     """
     Load environment variables for a platform.
 
-    Reads <repo>/platforms/<platform>/.env first (platform-specific, takes
+    Reads <repo>/experiments/<platform>/.env first (platform-specific, takes
     precedence), then <repo>/.env as a fallback for shared values. Neither file
     overwrites variables already set in the process environment.
 
@@ -164,7 +164,7 @@ def load_platform_from_path(toml_path: Path) -> Platform:
 
 
 def load_platform(name: str) -> Platform:
-    """Load platforms/<name>/<name>.toml."""
+    """Load experiments/<name>/<name>.toml."""
     return load_platform_from_path(PLATFORMS_DIR / name / f"{name}.toml")
 
 

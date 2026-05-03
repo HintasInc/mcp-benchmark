@@ -17,9 +17,9 @@ unaffected — ``analysis.json`` always reflects every per-prompt file on disk.
 Usage:
     uv run benchmark analyze --platform notion --all
     uv run benchmark analyze --platform slack \\
-        --runs platforms/slack/runs/20260427_1719__slack platforms/slack/runs/20260428_1030__hintas
+        --runs experiments/slack/runs/20260427_1719__slack experiments/slack/runs/20260428_1030__hintas
     uv run benchmark analyze --platform notion \\
-        --runs platforms/notion/runs/<dir>/ --prompt-ids 1,2,4
+        --runs experiments/notion/runs/<dir>/ --prompt-ids 1,2,4
 """
 from __future__ import annotations
 
@@ -115,13 +115,13 @@ def section(title: str) -> None:
 def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--platform", default="slack",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: slack)")
+                   help="Platform manifest under experiments/ (default: slack)")
     p.add_argument("--runs", nargs="+", type=Path,
                    help="Explicit list of run directories. Mutually exclusive with --all.")
     p.add_argument("--all", action="store_true",
                    help="Re-grade every run directory under <output-dir>.")
     p.add_argument("--output-dir", type=Path, default=platform.output_dir,
-                   help="Where run dirs live (default: platforms/<platform>/runs/). "
+                   help="Where run dirs live (default: experiments/<platform>/runs/). "
                         "Pass `runs` if your existing runs are in the top-level runs/.")
     p.add_argument("--prompts-file", default=str(platform.prompts_file),
                    help="Override the prompts file used by precompute.")
@@ -140,6 +140,9 @@ def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--regrade", action="store_true",
                    help="Delete existing per-prompt files for the targeted IDs "
                         "before running, forcing the agent to re-grade them.")
+    p.add_argument("--verbose", action="store_true",
+                   help="Include per-prompt detail tables in analysis.md "
+                        "(default: summarized — aggregates and breakdowns only).")
 
 
 def resolve_runs(args: argparse.Namespace) -> list[Path]:
@@ -303,11 +306,12 @@ def aggregate_analysis_json(run_dir: Path, stack: Stack) -> Path:
         }
 
     out = {
-        "timestamp":   run_dir.name,
-        "stacks":      [stack.name],
-        "per_prompt":  per_prompt,
-        "aggregates":  {stack.name: _aggregates(per_prompt, stack.name)},
-        "breakdowns":  _breakdowns(per_prompt, stack.name),
+        "timestamp":     run_dir.name,
+        "stacks":        [stack.name],
+        "display_names": {stack.name: stack.display_name},
+        "per_prompt":    per_prompt,
+        "aggregates":    {stack.name: _aggregates(per_prompt, stack.name)},
+        "breakdowns":    _breakdowns(per_prompt, stack.name),
     }
     path = run_dir / "analysis.json"
     path.write_text(json.dumps(out, indent=2))
@@ -366,19 +370,21 @@ def _breakdowns(per_prompt: dict, stack: str) -> dict:
     }
 
 
-def render_md_for(run_dir: Path) -> None:
+def render_md_for(run_dir: Path, verbose: bool = False) -> None:
     """Always (re)render analysis.md so it tracks the latest analysis.json."""
     md_path = run_dir / "analysis.md"
     if md_path.exists():
         md_path.unlink()
-    print("  rendering analysis.md from analysis.json")
-    md = render_md.render(run_dir)
+    mode = "verbose" if verbose else "summarized"
+    print(f"  rendering analysis.md from analysis.json ({mode})")
+    md = render_md.render(run_dir, verbose=verbose)
     md_path.write_text(md)
 
 
 def grade_one(run_dir: Path, platform: Platform, stack: Stack, template: str,
               prompts_file: str, timeout: int, skip_claude: bool,
-              prompt_ids: list[str] | None, regrade: bool) -> bool:
+              prompt_ids: list[str] | None, regrade: bool,
+              verbose: bool = False) -> bool:
     run_ts = run_dir.name
     section(f"Grading {platform.name}/{run_ts} ({stack.name})")
     print(f"  run_dir: {run_dir}")
@@ -412,7 +418,7 @@ def grade_one(run_dir: Path, platform: Platform, stack: Stack, template: str,
         if skip_claude:
             return True
         json_path = aggregate_analysis_json(run_dir, stack)
-        render_md_for(run_dir)
+        render_md_for(run_dir, verbose=verbose)
         print(f"  ✓ {json_path}")
         return True
 
@@ -439,7 +445,7 @@ def grade_one(run_dir: Path, platform: Platform, stack: Stack, template: str,
           f"({sorted(newly_done, key=lambda s: (len(s), s))})")
 
     json_path = aggregate_analysis_json(run_dir, stack)
-    render_md_for(run_dir)
+    render_md_for(run_dir, verbose=verbose)
 
     still_pending = [i for i in targeted if i not in after]
     if still_pending:
@@ -491,7 +497,8 @@ def run(args: argparse.Namespace, platform: Platform) -> int:
         try:
             ok = grade_one(r, platform, stack, template, args.prompts_file,
                            args.timeout, args.skip_claude,
-                           prompt_ids=prompt_ids, regrade=args.regrade)
+                           prompt_ids=prompt_ids, regrade=args.regrade,
+                           verbose=args.verbose)
         except RuntimeError as e:
             print(f"ERROR: {e}", file=sys.stderr)
             ok = False

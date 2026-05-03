@@ -13,8 +13,8 @@ respectively (read from each dir's results.json).
 Usage:
     uv run benchmark aggregate --platform notion --all
     uv run benchmark aggregate --platform slack \\
-        --runs platforms/slack/runs/20260428_2354__slack platforms/slack/runs/20260429_1015__hintas \\
-        --output-dir platforms/slack/final/manual
+        --runs experiments/slack/runs/20260428_2354__slack experiments/slack/runs/20260429_1015__hintas \\
+        --output-dir experiments/slack/final/manual
 """
 from __future__ import annotations
 
@@ -39,16 +39,16 @@ TIE_PP = 0.5
 def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--platform", default="slack",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: slack)")
+                   help="Platform manifest under experiments/ (default: slack)")
     p.add_argument("--runs", nargs="+", type=Path,
                    help="Two run directories (baseline + variant). "
                         "Mutually exclusive with --all.")
     p.add_argument("--all", action="store_true",
-                   help="Aggregate every run dir under platforms/<platform>/runs/. "
+                   help="Aggregate every run dir under experiments/<platform>/runs/. "
                         "Requires exactly two dirs to be present.")
     p.add_argument("--output-dir", type=Path,
                    help="Where to write final_analysis.json. "
-                        "Default: platforms/<platform>/final/<timestamp>/")
+                        "Default: experiments/<platform>/final/<timestamp>/")
 
 
 def resolve_runs(args: argparse.Namespace, platform: Platform) -> list[Path]:

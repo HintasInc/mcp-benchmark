@@ -15,7 +15,7 @@ Subcommands:
               → combined_comparison.md.
   scaffold    Generate the skeleton for a new benchmark platform.
 
-Tokens are read from `platforms/<platform>/.env` and `<repo>/.env` (loaded automatically).
+Tokens are read from `experiments/<platform>/.env` and `<repo>/.env` (loaded automatically).
 They are NOT accepted on the command line.
 
 Run subcommand pipeline:
@@ -58,13 +58,13 @@ from benchmarking.paths import REPO_ROOT
 def add_run_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--platform",     default="slack",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: slack)")
+                   help="Platform manifest under experiments/ (default: slack)")
     p.add_argument("--stack",        required=True,
                    choices=platform.stack_names,
                    help="Which stack from the platform manifest to benchmark")
     p.add_argument("--prompts-file", default=str(platform.prompts_file))
     p.add_argument("--output-dir",   default=str(platform.output_dir),
-                   help="Where run directories are written (default: platforms/<platform>/runs)")
+                   help="Where run directories are written (default: experiments/<platform>/runs)")
     p.add_argument("--prompt-ids",   nargs="+")
     p.add_argument("--difficulty",   nargs="+")
     p.add_argument("--category",     nargs="+")
@@ -110,6 +110,9 @@ def add_run_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--analysis-timeout", type=int, default=1800,
                    help="Per-run analysis agent timeout in seconds (default 1800, "
                         "applies only when --analyze is set)")
+    p.add_argument("--verbose-analysis", action="store_true",
+                   help="When chaining --analyze, render analysis.md with per-prompt "
+                        "detail tables (default: summarized).")
 
 
 def section(title: str) -> None:
@@ -197,6 +200,7 @@ def phase_analyze(args: argparse.Namespace, platform: Platform, run_dir: Path) -
         continue_on_error=False,
         prompt_ids=None,
         regrade=False,
+        verbose=args.verbose_analysis,
     )
     rc = run_per_run_analysis.run(analyze_args, platform)
     if rc != 0:

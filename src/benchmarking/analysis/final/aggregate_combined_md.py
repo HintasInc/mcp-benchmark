@@ -10,18 +10,19 @@ side-by-side report.
 Usage:
     uv run benchmark combine \\
         --platform notion \\
-        --baseline platforms/notion/runs/20260429_205418__notion \\
-        --variants platforms/notion/runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off \\
-                   platforms/notion/runs/20260429_231236__hintas__topk10_batch-off_max8_rag-off \\
-                   platforms/notion/runs/20260430_100101__hintas__topk10_batch-off_max5_rag-off
+        --baseline experiments/notion/runs/20260429_205418__notion \\
+        --variants experiments/notion/runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off \\
+                   experiments/notion/runs/20260429_231236__hintas__topk10_batch-off_max8_rag-off \\
+                   experiments/notion/runs/20260430_100101__hintas__topk10_batch-off_max5_rag-off
 
-    # default output: platforms/<platform>/final/<timestamp>/combined_comparison.md
+    # default output: experiments/<platform>/results.md
     # override with --output-dir <path>
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter
 from datetime import datetime
@@ -36,13 +37,6 @@ from benchmarking.paths import REPO_ROOT
 VERDICT_KEYS  = ("PASS", "PARTIAL", "FAIL", "ERROR")
 VERDICT_GLYPH = {"PASS": "✓", "PARTIAL": "◐", "FAIL": "✗", "ERROR": "⚠"}
 
-HINTAS_PARAM_LABELS = [
-    ("search_top_k",         "search_top_k"),
-    ("search_batch_enabled", "search_batch_enabled"),
-    ("search_max_results",   "search_max_results"),
-    ("rag_enabled",          "rag_enabled"),
-]
-
 TIE_PCT = 1.0
 TIE_PP  = 0.5
 
@@ -50,7 +44,7 @@ TIE_PP  = 0.5
 def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--platform", default="notion",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: notion)")
+                   help="Platform manifest under experiments/ (default: notion)")
     p.add_argument("--baseline", type=Path, required=True,
                    help="Run directory for the baseline stack.")
     p.add_argument("--variants", nargs="+", type=Path, action="extend",
@@ -58,8 +52,14 @@ def add_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
                    help="One or more variant run directories. May be repeated, "
                         "e.g. `--variants A B` or `--variants A --variants B`.")
     p.add_argument("--output-dir", type=Path,
-                   help="Where to write combined_comparison.md. "
-                        "Default: platforms/<platform>/final/<timestamp>/")
+                   help="Where to write results.md. "
+                        "Default: experiments/<platform>/")
+    p.add_argument("--force", action="store_true",
+                   help="Overwrite results.md without prompting.")
+    p.add_argument("--verbose", action="store_true",
+                   help="Include per-prompt detail tables (verdicts, tokens, "
+                        "wall-clock). Default: summarized — tallies and "
+                        "comparable metrics only.")
 
 
 def resolve_dir(p: Path) -> Path:
@@ -104,10 +104,8 @@ def normalize_side(side: dict) -> dict:
         "tools_failed":  failed,
         "tools_partial": partial,
         "tools_total":   total,
-        "initial_context": side.get("initial_context", 0),
-        "peak_context":    side.get("peak_context", 0),
-        "total_tokens":    side.get("total_tokens", 0),
-        "wall_clock_s":    side.get("wall_clock_s", 0),
+        "total_tokens":  side.get("total_tokens", 0),
+        "wall_clock_s":  side.get("wall_clock_s", 0),
     }
 
 
@@ -168,9 +166,7 @@ def comparable_metrics(per_prompt: dict, label: str, comparable_ids: list[str]) 
     return {
         "comparable_n":             n,
         "comparable_total_tokens":  total_tokens,
-        "comparable_avg_initial_context": mean(r["initial_context"] for r in rows) if rows else None,
-        "comparable_avg_peak_context":    mean(r["peak_context"]    for r in rows) if rows else None,
-        "comparable_avg_wall_clock_s":    mean(r["wall_clock_s"]    for r in rows) if rows else None,
+        "comparable_avg_wall_clock_s":         mean(r["wall_clock_s"] for r in rows) if rows else None,
         "comparable_avg_tokens_per_prompt":    (total_tokens / n) if n else None,
         "comparable_avg_tokens_per_tool_call": (total_tokens / total_tools) if total_tools else None,
     }
@@ -263,9 +259,6 @@ def pairwise_verdict(b_totals, v_totals, b_label, v_label) -> dict:
     tokens_w, tokens_m = lower_wins(b_totals.get("comparable_total_tokens"),
                                     v_totals.get("comparable_total_tokens"),
                                     b_label, v_label)
-    peak_w,   peak_m   = lower_wins(b_totals.get("comparable_avg_peak_context"),
-                                    v_totals.get("comparable_avg_peak_context"),
-                                    b_label, v_label)
     acc_w,    acc_m    = higher_wins_pp(b_totals.get("pass_rate"),
                                         v_totals.get("pass_rate"),
                                         b_label, v_label)
@@ -273,7 +266,7 @@ def pairwise_verdict(b_totals, v_totals, b_label, v_label) -> dict:
                                          v_totals.get("tool_pass_rate"),
                                          b_label, v_label)
 
-    wins = Counter(w for w in (speed_w, tokens_w, peak_w, acc_w, tool_w) if w != "Tie")
+    wins = Counter(w for w in (speed_w, tokens_w, acc_w, tool_w) if w != "Tie")
     if not wins:
         winner = "Tie"
     elif len(wins) == 1:
@@ -284,10 +277,9 @@ def pairwise_verdict(b_totals, v_totals, b_label, v_label) -> dict:
 
     return {
         "winner": winner,
-        "accuracy_winner":  acc_w,    "accuracy_margin_pp":      acc_m,
-        "speed_winner":     speed_w,  "speed_margin_pct":        speed_m,
-        "tokens_winner":    tokens_w, "tokens_margin_pct":       tokens_m,
-        "peak_context_winner": peak_w, "peak_context_margin_pct": peak_m,
+        "accuracy_winner":  acc_w,    "accuracy_margin_pp":  acc_m,
+        "speed_winner":     speed_w,  "speed_margin_pct":    speed_m,
+        "tokens_winner":    tokens_w, "tokens_margin_pct":   tokens_m,
         "tool_reliability_winner": tool_w,
     }
 
@@ -295,16 +287,20 @@ def pairwise_verdict(b_totals, v_totals, b_label, v_label) -> dict:
 # ---------------------------------------------------------------------------
 # rendering
 
-def md_link(run_dir: Path, output_dir: Path) -> str | None:
+def run_dir_link(run_dir: Path, output_dir: Path) -> str:
+    """Render the run-dir name as a link to its analysis.md (relative path).
+
+    Falls back to a plain code span when analysis.md is missing.
+    """
     md = run_dir / "analysis.md"
+    name = run_dir.name
     if not md.exists():
-        return None
+        return f"`{name}` _(missing analysis.md)_"
     try:
-        rel = md.resolve().relative_to(output_dir.resolve())
-        target = str(rel)
+        target = os.path.relpath(md.resolve(), start=output_dir.resolve())
     except ValueError:
         target = str(md.resolve())
-    return f"[`{md.name}`]({target})"
+    return f"[`{name}`]({target})"
 
 
 def render_header(L, platform, runs, ts, n_prompts):
@@ -313,61 +309,15 @@ def render_header(L, platform, runs, ts, n_prompts):
     L.append(f"**Scope:** {n_prompts} prompts × {len(runs)} stacks "
              f"(baseline + {len(runs) - 1} variant{'s' if len(runs) != 2 else ''}).")
     L.append("")
-    for run in runs:
-        kind = "Baseline" if run is runs[0] else "Variant "
-        L.append(f"- {kind}: `{run['dir']}` ({run['label']})")
-    L.append("")
 
 
-def render_run_links(L, runs, output_dir):
-    L.append("## Per-run reports")
+def render_runs_list(L, runs, output_dir):
+    L.append("## Measured against")
     L.append("")
     for run in runs:
-        link = md_link(run["dir"], output_dir)
-        L.append(f"- {run['label']}: {link or '_(missing analysis.md)_'}  ↳ `{run['dir']}`")
+        kind = "baseline" if run is runs[0] else "variant"
+        L.append(f"- **{run['label']}** ({kind}) — {run_dir_link(run['dir'], output_dir)}")
     L.append("")
-
-
-def render_stack_config(L, runs):
-    """Single combined table: parameter rows × baseline + every variant column."""
-    if not any(r["hintas_params"] for r in runs):
-        return
-    baseline = runs[0]
-    variants = [r for r in runs[1:] if r["hintas_params"]]
-    if not variants:
-        return
-    multi = len(variants) > 1
-
-    L.append("## MCP configuration")
-    L.append("")
-    L.append("> Variant columns show the parameters each variant run was launched with, "
-             "alongside the baseline MCP (which carries no Hintas params).")
-    L.append("")
-
-    differing_keys = [k for k, _ in HINTAS_PARAM_LABELS
-                      if len({(v["hintas_params"] or {}).get(k) for v in variants}) > 1]
-
-    headers = ["Parameter", baseline["label"]] + [v["label"] for v in variants]
-    aligns  = [":----------"] + [":--------------:"] * (len(headers) - 1)
-    L.append("| " + " | ".join(headers) + " |")
-    L.append("|" + "|".join(aligns) + "|")
-    for key, label_str in HINTAS_PARAM_LABELS:
-        b_val = fmt_param_value(baseline["hintas_params"].get(key)) \
-            if baseline["hintas_params"] else "—"
-        cells = [f"`{label_str}`", f"**{b_val}**"]
-        for v in variants:
-            v_val = fmt_param_value(v["hintas_params"].get(key))
-            mark = "  ⚠" if multi and key in differing_keys else ""
-            cells.append(f"**{v_val}**{mark}")
-        L.append("| " + " | ".join(cells) + " |")
-    L.append("")
-
-    if multi:
-        if differing_keys:
-            L.append(f"_Parameters differing across variants: `{'`, `'.join(differing_keys)}`._")
-        else:
-            L.append("_All variants share identical parameters._")
-        L.append("")
 
 
 def render_legend(L):
@@ -375,8 +325,7 @@ def render_legend(L):
     L.append("")
     L.append("- `✓ PASS` — every success criterion met; usable answer; no blocking tool failure.")
     L.append("- `◐ PARTIAL` — some criteria met, others blocked; partial multi-step work.")
-    L.append("- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** "
-             "(\"user doesn't exist\", \"page not shared\", \"integration lacks access\", server refused).")
+    L.append("- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** ")
     L.append("- `⚠ ERROR` — infrastructure failure (no result, orchestrator error, or "
              "`result_subtype: error` with no usable output).")
     L.append("")
@@ -452,7 +401,7 @@ def render_verdict_tally(L, runs, totals_by_label):
         for r in runs:
             cells.append(str(totals_by_label[r["label"]]["verdicts"].get(k, 0)))
         L.append("| " + " | ".join(cells) + " |")
-    cells = ["Pass rate"]
+    cells = ["Success rate"]
     for r in runs:
         cells.append(fmt_pct(totals_by_label[r["label"]]["pass_rate"]))
     L.append("| " + " | ".join(cells) + " |")
@@ -461,7 +410,7 @@ def render_verdict_tally(L, runs, totals_by_label):
 
 def render_tool_tally(L, runs, totals_by_label):
     """Single combined table: rows = tool-call metrics, columns = each stack."""
-    L.append("## Tool-call tallies (every prompt, regardless of verdict)")
+    L.append("## Tool-call tallies")
     L.append("")
     headers = ["Metric"] + [r["label"] for r in runs]
     aligns  = [":-------"] + ["---:"] * len(runs)
@@ -489,8 +438,6 @@ COMPARABLE_ROWS = (
     ("Total tokens",            "comparable_total_tokens",            "int"),
     ("Avg tokens / prompt",     "comparable_avg_tokens_per_prompt",   "int"),
     ("Avg tokens / tool call",  "comparable_avg_tokens_per_tool_call","int"),
-    ("Avg peak context",        "comparable_avg_peak_context",        "int"),
-    ("Avg initial context",     "comparable_avg_initial_context",     "float2"),
     ("Avg wall-clock (s)",      "comparable_avg_wall_clock_s",        "float1"),
 )
 
@@ -507,10 +454,10 @@ def _fmt_comparable(v, kind):
 
 def render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids):
     """Single combined table: rows = comparable metrics, columns = each stack."""
-    L.append("## Global comparable metrics (every stack PASS)")
-    L.append("")
+    L.append("## Global comparable metrics")
+    L.append("> Only the prompts where every stack passed are included.")
     cmp_str = ", ".join(comparable_ids) if comparable_ids else "(none)"
-    L.append(f"- Comparable prompt IDs: `{cmp_str}` (count: {len(comparable_ids)})")
+    L.append(f"- Included count: {len(comparable_ids)} (prompt IDs: `{cmp_str}`)")
     L.append(f"- Excluded count: {len(excluded_ids)}")
     L.append("")
     if not comparable_ids:
@@ -523,7 +470,7 @@ def render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids):
         r["label"]: comparable_metrics(per_prompt, r["label"], comparable_ids)
         for r in runs
     }
-    headers = ["Metric"] + [r["label"] for r in runs]
+    headers = ["Metric"] + [r["short_label"] for r in runs]
     aligns  = [":-------"] + ["---:"] * len(runs)
     L.append("| " + " | ".join(headers) + " |")
     L.append("|" + "|".join(aligns) + "|")
@@ -535,42 +482,66 @@ def render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids):
     L.append("")
 
 
-def render_pair_comparable(L, runs, per_prompt, ordered_ids):
+def render_pair_comparable(L, runs, per_prompt, ordered_ids, totals_by_label):
     """Single combined table. For each variant a 3-column block (baseline value
     on that pair / variant value / Δ) so all pairs sit side-by-side. The
     baseline value differs across blocks because each pair uses its own
-    intersection."""
+    intersection.
+
+    Verdict rows (success rate, tool reliability, overall winner) are appended
+    to the same table so the reader sees the full pairwise picture in one place.
+
+    When there is exactly one variant, the per-pair subset is identical to the
+    global "every stack PASS" subset, so we render this section under the
+    `## Global comparable metrics` heading and skip the dedicated global block."""
     baseline = runs[0]
     variants = runs[1:]
     multi = len(variants) > 1
-    L.append("## Per-pair comparable metrics (baseline ∩ variant PASS)")
+    if multi:
+        L.append("## Per-pair comparable metrics (baseline ∩ variant PASS)")
+    else:
+        L.append("## Global comparable metrics")
     L.append("")
     L.append("> For each variant, this restricts to prompts where **both** the "
              "baseline and that variant passed — the fair apples-to-apples "
-             "subset for token, speed, and context comparisons.")
+             "subset for token and speed comparisons.")
     if multi:
         L.append("> Each variant column group uses its own pair-specific "
                  "intersection, so baseline values differ across groups.")
     L.append("")
 
+    b_short = baseline["short_provider"]
+    b_totals = totals_by_label[baseline["label"]]
+
     pair_data = []
     for v in variants:
         ids = pair_comparable_ids(per_prompt, ordered_ids,
                                   baseline["label"], v["label"])
+        b_metrics = comparable_metrics(per_prompt, baseline["label"], ids)
+        v_metrics = comparable_metrics(per_prompt, v["label"], ids)
+        v_totals = totals_by_label[v["label"]]
+        verdict = pairwise_verdict(
+            {**b_totals, **b_metrics},
+            {**v_totals, **v_metrics},
+            baseline["label"], v["label"],
+        )
         pair_data.append({
-            "v": v,
-            "ids": ids,
-            "b_metrics": comparable_metrics(per_prompt, baseline["label"], ids),
-            "v_metrics": comparable_metrics(per_prompt, v["label"], ids),
+            "v":         v,
+            "ids":       ids,
+            "b_metrics": b_metrics,
+            "v_metrics": v_metrics,
+            "v_totals":  v_totals,
+            "verdict":   verdict,
         })
 
     for d in pair_data:
         ids_str = ", ".join(d["ids"]) if d["ids"] else "(none)"
         if multi:
-            L.append(f"- {baseline['label']} ∩ {d['v']['label']}: "
+            L.append(f"- {baseline['short_label']} ∩ {d['v']['short_label']}: "
                      f"n={len(d['ids'])}, IDs `{ids_str}`")
         else:
             L.append(f"- Comparable prompt IDs: `{ids_str}` (count: {len(d['ids'])})")
+            L.append(f"- Excluded count: {len(ordered_ids) - len(d['ids'])}")
     L.append("")
 
     if not any(d["ids"] for d in pair_data):
@@ -581,10 +552,11 @@ def render_pair_comparable(L, runs, per_prompt, ordered_ids):
     headers = ["Metric"]
     aligns  = [":-------"]
     for d in pair_data:
-        suffix = f" ({d['v']['label']} pair)" if multi else ""
-        headers.append(f"{baseline['label']}{suffix}")
-        headers.append(d["v"]["label"])
-        headers.append(f"Δ ({d['v']['label']} − {baseline['label']})")
+        v_short = d["v"]["short_provider"]
+        suffix = f" ({d['v']['short_provider']} pair)" if multi else ""
+        headers.append(f"{baseline['short_label']}{suffix}")
+        headers.append(d["v"]["short_label"])
+        headers.append(f"Δ {v_short} - {b_short}")
         aligns.extend(["---:", "---:", "---:"])
     L.append("| " + " | ".join(headers) + " |")
     L.append("|" + "|".join(aligns) + "|")
@@ -608,25 +580,54 @@ def render_pair_comparable(L, runs, per_prompt, ordered_ids):
             else:
                 cells.append(fmt_delta_float(v_val - b_val, 2))
         L.append("| " + " | ".join(cells) + " |")
+
+    cells = ["Success rate"]
+    for d in pair_data:
+        b_rate = b_totals["pass_rate"]
+        v_rate = d["v_totals"]["pass_rate"]
+        cells.append(fmt_pct(b_rate))
+        cells.append(fmt_pct(v_rate))
+        cells.append(f"{fmt_delta_float((v_rate - b_rate) * 100.0, 1)} pp")
+    L.append("| " + " | ".join(cells) + " |")
+
+    cells = ["Tool pass rate"]
+    for d in pair_data:
+        b_rate = b_totals["tool_pass_rate"]
+        v_rate = d["v_totals"]["tool_pass_rate"]
+        cells.append(fmt_pct(b_rate))
+        cells.append(fmt_pct(v_rate))
+        cells.append(f"{fmt_delta_float((v_rate - b_rate) * 100.0, 1)} pp")
+    L.append("| " + " | ".join(cells) + " |")
     L.append("")
 
 
 def render_pairwise_verdicts(L, runs, totals_by_label, per_prompt, ordered_ids):
-    """Single combined table. Rows = metrics, columns = each variant. Each cell
-    encodes the pair winner: `✓` if the variant beats baseline, `base` if the
-    baseline beats the variant, `Tie` otherwise — followed by the margin."""
+    """Per-variant 2-column table (Metric | Result). Each result cell reads as
+    `{winner display name} wins by {margin}`. The header row is intentionally
+    blank since the variant identity is already encoded in each cell."""
     baseline = runs[0]
     variants = runs[1:]
+    multi    = len(variants) > 1
     b_totals = totals_by_label[baseline["label"]]
 
-    L.append("## Pairwise verdicts (each variant vs baseline)")
-    L.append("")
-    L.append(f"Baseline: **{baseline['label']}**. Speed / token / context margins "
-             "use the per-pair comparable subset (both stacks PASS). Cells show the "
-             "winner: `✓` = variant wins, `base` = baseline wins.")
+    L.append("## Pairwise verdicts")
     L.append("")
 
-    verdicts = {}
+    metric_rows = (
+        ("Success rate", "accuracy_winner",
+            lambda d: f"+{fmt_float(d['accuracy_margin_pp'], 1)} percentage points"),
+        ("Speed",        "speed_winner",
+            lambda d: f"+{fmt_float(d['speed_margin_pct'], 1)}%"),
+        ("Tokens",       "tokens_winner",
+            lambda d: f"+{fmt_float(d['tokens_margin_pct'], 1)}%"),
+        ("Tool reliability", "tool_reliability_winner", lambda d: ""),
+    )
+
+    def result_text(winner: str, margin: str) -> str:
+        if winner == "Tie":
+            return "Tie"
+        return f"{winner} wins by {margin}" if margin else f"{winner} wins"
+
     for v in variants:
         ids = pair_comparable_ids(per_prompt, ordered_ids,
                                   baseline["label"], v["label"])
@@ -634,54 +635,21 @@ def render_pairwise_verdicts(L, runs, totals_by_label, per_prompt, ordered_ids):
         v_metrics = comparable_metrics(per_prompt, v["label"],        ids)
         b_for_pair = {**b_totals, **b_metrics}
         v_for_pair = {**totals_by_label[v["label"]], **v_metrics}
-        verdicts[v["label"]] = pairwise_verdict(b_for_pair, v_for_pair,
-                                                baseline["label"], v["label"])
+        d = pairwise_verdict(b_for_pair, v_for_pair,
+                             baseline["label"], v["label"])
 
-    def cell(winner_label, v_label, margin_str, win_glyph="✓"):
-        if winner_label == "Tie":
-            return "Tie"
-        if winner_label == v_label:
-            return f"{win_glyph} {margin_str}".rstrip()
-        if winner_label == baseline["label"]:
-            return f"base {margin_str}".rstrip()
-        return "—"
+        if multi:
+            L.append(f"### {v['label']} vs {baseline['label']}")
+            L.append("")
 
-    headers = ["Metric"] + [v["label"] for v in variants]
-    aligns  = [":-------"] + [":---:"] * len(variants)
-    L.append("| " + " | ".join(headers) + " |")
-    L.append("|" + "|".join(aligns) + "|")
-
-    metric_rows = (
-        ("Accuracy",     "accuracy_winner",
-            lambda d: f"+{fmt_float(d['accuracy_margin_pp'], 1)} pp"),
-        ("Speed",        "speed_winner",
-            lambda d: f"+{fmt_float(d['speed_margin_pct'], 1)}%"),
-        ("Tokens",       "tokens_winner",
-            lambda d: f"+{fmt_float(d['tokens_margin_pct'], 1)}%"),
-        ("Peak context", "peak_context_winner",
-            lambda d: f"+{fmt_float(d['peak_context_margin_pct'], 1)}%"),
-        ("Tool reliability", "tool_reliability_winner", lambda d: ""),
-    )
-    for label, winner_key, margin_fn in metric_rows:
-        cells = [label]
-        for v in variants:
-            d = verdicts[v["label"]]
-            cells.append(cell(d[winner_key], v["label"], margin_fn(d)))
-        L.append("| " + " | ".join(cells) + " |")
-
-    cells = ["**Overall winner**"]
-    for v in variants:
-        d = verdicts[v["label"]]
-        if d["winner"] == "Tie":
-            cells.append("**Tie**")
-        elif d["winner"] == v["label"]:
-            cells.append("**✓**")
-        elif d["winner"] == baseline["label"]:
-            cells.append("**base**")
-        else:
-            cells.append("—")
-    L.append("| " + " | ".join(cells) + " |")
-    L.append("")
+        L.append("<table>")
+        for metric_label, winner_key, margin_fn in metric_rows:
+            L.append(f"<tr><td>{metric_label}</td>"
+                     f"<td>{result_text(d[winner_key], margin_fn(d))}</td></tr>")
+        overall = "<b>Tie</b>" if d["winner"] == "Tie" else f"<b>{d['winner']}</b>"
+        L.append(f"<tr><td><b>Overall winner</b></td><td>{overall}</td></tr>")
+        L.append("</table>")
+        L.append("")
 
 
 # ---------------------------------------------------------------------------
@@ -738,6 +706,42 @@ def _format_param_subset(params: dict, keys: list[str]) -> str:
     return ", ".join(bits)
 
 
+def assign_short_labels(runs: list[dict], platform: Platform) -> None:
+    """Mutate each run dict to include a short provider tag and short label.
+
+    Used by the comparable-metrics tables so headers stay scannable:
+      `<Platform> MCP - Official` for the baseline,
+      `<Platform> MCP - Hintas` (with optional disambiguator) for each variant.
+    """
+    stack_count: dict[str, int] = Counter(r["stack_name"] for r in runs)
+
+    differing_keys: dict[str, list[str]] = {}
+    for stack_name, count in stack_count.items():
+        if count <= 1:
+            continue
+        siblings = [r for r in runs if r["stack_name"] == stack_name]
+        keys = sorted({k for r in siblings if r["hintas_params"]
+                         for k in r["hintas_params"]})
+        differing = [k for k in keys
+                     if len({(r["hintas_params"] or {}).get(k) for r in siblings}) > 1]
+        differing_keys[stack_name] = differing
+
+    seen: dict[str, int] = {}
+    baseline_stack_name = platform.baseline_stack.name
+    for r in runs:
+        provider = "Official" if r["stack_name"] == baseline_stack_name else "Hintas"
+        if stack_count[r["stack_name"]] > 1:
+            params = r["hintas_params"] or {}
+            keys = differing_keys.get(r["stack_name"], [])
+            suffix = _format_param_subset(params, keys) if params else ""
+            if not suffix:
+                seen[r["stack_name"]] = seen.get(r["stack_name"], 0) + 1
+                suffix = f"#{seen[r['stack_name']]}"
+            provider = f"{provider} ({suffix})"
+        r["short_provider"] = provider
+        r["short_label"]    = f"{platform.display_name} MCP - {provider}"
+
+
 def run(args: argparse.Namespace, platform: Platform) -> int:
     baseline_dir = resolve_dir(args.baseline)
     variant_dirs = [resolve_dir(p) for p in args.variants]
@@ -751,6 +755,7 @@ def run(args: argparse.Namespace, platform: Platform) -> int:
                  f"{platform.baseline_stack.name!r}")
 
     assign_labels(runs, platform)
+    assign_short_labels(runs, platform)
 
     # Disambiguate exact-duplicate labels by appending the run timestamp.
     label_counts = Counter(r["label"] for r in runs)
@@ -780,27 +785,40 @@ def run(args: argparse.Namespace, platform: Platform) -> int:
         out_dir = (args.output_dir if args.output_dir.is_absolute()
                    else (REPO_ROOT / args.output_dir))
     else:
-        out_dir = platform.root / "final" / ts
+        out_dir = platform.root
     out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    out_path = out_dir / "results.md"
+    if out_path.exists() and not getattr(args, "force", False):
+        if not sys.stdin.isatty():
+            sys.exit(f"ERROR: {out_path} already exists; pass --force to overwrite.")
+        try:
+            reply = input(f"{out_path} already exists. Overwrite? [y/N]: ").strip().lower()
+        except EOFError:
+            reply = ""
+        if reply not in ("y", "yes"):
+            print("aborted; existing results.md left unchanged.")
+            return 1
+
+    verbose = bool(getattr(args, "verbose", False))
+
     L: list[str] = []
     render_header(L, platform, runs, ts, len(ordered_ids))
-    render_run_links(L, runs, out_dir)
-    render_stack_config(L, runs)
+    render_runs_list(L, runs, out_dir)
     render_legend(L)
-    render_per_prompt_verdicts(L, per_prompt, ordered_ids, runs)
-    render_per_prompt_metrics(L, per_prompt, ordered_ids, runs,
-                              "total_tokens", "total tokens", fmt_int)
-    render_per_prompt_metrics(L, per_prompt, ordered_ids, runs,
-                              "wall_clock_s", "wall-clock", lambda x: f"{fmt_float(x, 1)}s")
+    if verbose:
+        render_per_prompt_verdicts(L, per_prompt, ordered_ids, runs)
+        render_per_prompt_metrics(L, per_prompt, ordered_ids, runs,
+                                  "total_tokens", "total tokens", fmt_int)
+        render_per_prompt_metrics(L, per_prompt, ordered_ids, runs,
+                                  "wall_clock_s", "wall-clock", lambda x: f"{fmt_float(x, 1)}s")
     render_verdict_tally(L, runs, totals_by_label)
     render_tool_tally(L, runs, totals_by_label)
-    render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids)
-    render_pair_comparable(L, runs, per_prompt, ordered_ids)
-    render_pairwise_verdicts(L, runs, totals_by_label, per_prompt, ordered_ids)
+    if len(runs) > 2:
+        render_global_comparable(L, runs, per_prompt, comparable_ids, excluded_ids)
+    render_pair_comparable(L, runs, per_prompt, ordered_ids, totals_by_label)
 
-    out_path = out_dir / "combined_comparison.md"
     out_path.write_text("\n".join(L))
     print(f"wrote {out_path} ({out_path.stat().st_size:,} bytes)")
     for r in runs:

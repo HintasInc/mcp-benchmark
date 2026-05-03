@@ -1,41 +1,34 @@
 # MCP Benchmark
 
-<p align="center">
-  <a href="https://hintas.com">
-    <img src="./assets/hintas-banner.png" alt="Hintas" width="720" />
-  </a>
-</p>
-
-<p align="center">
-  <strong>Official platform MCPs vs MCPs by <a href="https://hintas.com">Hintas</a> — head-to-head, on the same prompts, against mirrored workspaces.</strong>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0" /></a>
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-%E2%89%A53.10-3776AB.svg?logo=python&logoColor=white" alt="Python ≥3.10" /></a>
-  <a href="#supported-platforms"><img src="https://img.shields.io/badge/platforms-Slack%20%7C%20Notion-7C3AED.svg" alt="Platforms: Slack | Notion" /></a>
-  <a href="https://hintas.com"><img src="https://img.shields.io/badge/hintas.com-000000.svg?logo=safari&logoColor=white" alt="hintas.com" /></a>
-</p>
+**Official platform MCPs vs MCPs by [Hintas](https://hintas.com) — head-to-head, on the same prompts, against mirrored workspaces.**
 
 ---
 
 For each platform, two stacks — the platform's official MCP (baseline) and the MCP provided by Hintas (variant) — answer the same prompts under identical conditions. The harness measures pass rate, token usage, tool-call count, wall time, and failure modes, then reports baseline − variant deltas across the prompt suite.
 
-## Supported platforms
+## Experiments and Results
 
-| Platform | Baseline MCP | Variant MCP | Setup |
-|---|---|---|---|
-| Slack | `slack` (official) | `hintas-slack` | [platforms/slack/README.md](platforms/slack/README.md) |
-| Notion | `notion` (official) | `hintas-notion` | [platforms/notion/README.md](platforms/notion/README.md) |
+Each platform was run head-to-head over a fixed prompt suite (48 prompts for Slack, 58 for Notion), with the official MCP and the Hintas MCP answering the same prompts against mirrored workspaces. The tables below summarize the per-dimension verdicts; full per-prompt breakdowns live in each platform's report.
 
-## Latest results
+### Slack
 
-| Platform | Comparison report |
-|---|---|
-| Slack | [platforms/slack/final/20260501_1927/combined_comparison.md](platforms/slack/final/20260501_1927/combined_comparison.md) |
-| Notion | [platforms/notion/final/20260503_1101/combined_comparison.md](platforms/notion/final/20260503_1101/combined_comparison.md) |
+| Metric         | Slack MCP — Official | Slack MCP — Hintas | Δ (Hintas − Official) |
+| :------------- | -------------------: | -----------------: | --------------------: |
+| Success rate   |                  23% |                77% |             +54.2 pp  |
+| Speed          |               16.9 s |             44.2 s |              +27.2 s  |
+| Tokens         |                  590 |              1,669 |               +1,079  |
 
-Older runs are preserved under each platform's `final/<timestamp>/` directory.
+Full report: [experiments/slack/results.md](experiments/slack/results.md)
+
+### Notion
+
+| Metric         | Notion MCP — Official | Notion MCP — Hintas | Δ (Hintas − Official) |
+| :------------- | --------------------: | ------------------: | --------------------: |
+| Success rate   |                   68% |                 80% |             +12.5 pp  |
+| Speed          |                45.4 s |              48.2 s |               +2.8 s  |
+| Tokens         |                 2,233 |               2,126 |                 −107  |
+
+Full report: [experiments/notion/results.md](experiments/notion/results.md)
 
 ## What gets measured
 
@@ -60,7 +53,7 @@ uv run benchmark run --platform slack --stack slack    # baseline
 uv run benchmark run --platform slack --stack hintas   # variant
 ```
 
-Tokens are read from `platforms/<name>/.env` — see the platform README for the required variables.
+Tokens are read from `experiments/<name>/.env` — see the platform README for the required variables.
 
 Run `uv run benchmark --help` for the full subcommand and flag list.
 
@@ -70,8 +63,4 @@ For the harness internals — pipeline subcommands, output layout, manifest sche
 
 ---
 
-<div align="center">
-
 Built by **[Hintas](https://hintas.com)**
-
-</div>

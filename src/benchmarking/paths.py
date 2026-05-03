@@ -13,5 +13,5 @@ from __future__ import annotations
 from pathlib import Path
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
-PLATFORMS_DIR: Path = REPO_ROOT / "platforms"
+PLATFORMS_DIR: Path = REPO_ROOT / "experiments"
 ANALYSIS_DIR: Path = Path(__file__).resolve().parent / "analysis"

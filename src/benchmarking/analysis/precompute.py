@@ -17,9 +17,9 @@ working path of the agent — rather than from metadata heuristics.
 
 Usage:
     uv run benchmark precompute \
-        --run-dir    platforms/slack/runs/20260423_2107__slack \
-        --prompts    platforms/slack/prompts/benchmark_prompts.json \
-        --out        platforms/slack/runs/20260423_2107__slack/analysis_data.json
+        --run-dir    experiments/slack/runs/20260423_2107__slack \
+        --prompts    experiments/slack/prompts/benchmark_prompts.json \
+        --out        experiments/slack/runs/20260423_2107__slack/analysis_data.json
 """
 from __future__ import annotations
 
@@ -606,7 +606,7 @@ def precompute(run_dir: Path, prompts_file: Path, stack: str) -> dict:
 def add_arguments(p: argparse.ArgumentParser) -> None:
     p.add_argument("--run-dir", required=True, type=Path,
                    help="Path to the benchmark run directory "
-                        "(e.g. platforms/slack/runs/20260423_2107__slack)")
+                        "(e.g. experiments/slack/runs/20260423_2107__slack)")
     p.add_argument("--prompts", required=True, type=Path,
                    help="Path to benchmark_prompts.json")
     p.add_argument("--stack",

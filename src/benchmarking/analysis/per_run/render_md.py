@@ -21,52 +21,34 @@ VERDICT_GLYPH = {"PASS": "✓", "PARTIAL": "◐", "FAIL": "✗", "ERROR": "⚠"}
 DIFFICULTIES  = ["L1", "L2", "L3", "L4", "L5"]
 CATEGORIES    = ["retrieval", "search", "write", "workflow", "orchestration", "edge_case"]
 
-HINTAS_PARAM_LABELS = [
-    ("search_top_k",         "search_top_k"),
-    ("search_batch_enabled", "search_batch_enabled"),
-    ("search_max_results",   "search_max_results"),
-    ("rag_enabled",          "rag_enabled"),
-]
-
 
 def fmt_int(x):    return f"{int(round(x)):,}" if x is not None else ""
 def fmt_pct(x):    return f"{x*100:.0f}%" if x is not None else ""
 def fmt_float(x, n=2): return f"{x:.{n}f}" if x is not None else ""
 
 
-def fmt_param_value(v) -> str:
-    if isinstance(v, bool):
-        return "on" if v else "off"
-    if v is None:
-        return "—"
-    return str(v)
-
-
 def display_name_for(stack: str) -> str:
     return f"{stack.capitalize()} MCP"
 
 
-def load_hintas_params(run_dir: Path) -> dict | None:
-    """Pull `hintas_params` from analysis_data.json or results.json (in that order)."""
-    for fname in ("analysis_data.json", "results.json"):
-        path = run_dir / fname
-        if not path.exists():
-            continue
-        try:
-            data = json.loads(path.read_text())
-        except json.JSONDecodeError:
-            continue
-        params = data.get("hintas_params")
-        if params:
-            return params
-    return None
+def headline_display_name(stack: str, data: dict) -> str:
+    override = (data.get("display_names") or {}).get(stack)
+    if override:
+        return override
+    return stack.capitalize()
 
 
-def normalize(data: dict) -> tuple[str, str, list[dict]]:
-    """Return (ts, stack, prompts) regardless of which schema the analyzer wrote."""
+def platform_name(run_dir: Path) -> str:
+    return run_dir.parent.parent.name.capitalize()
+
+
+def normalize(data: dict) -> tuple[str, str, str, list[dict]]:
+    """Return (ts, stack, display_name, prompts) regardless of which schema the analyzer wrote."""
     if "prompts" in data and "stack" in data:
         ts = data.get("run_id") or data.get("graded_at") or ""
-        return ts, data["stack"], data["prompts"]
+        stack = data["stack"]
+        display_name = (data.get("display_names") or {}).get(stack) or display_name_for(stack)
+        return ts, stack, display_name, data["prompts"]
 
     if "per_prompt" in data and "stacks" in data:
         stacks = data["stacks"]
@@ -75,6 +57,7 @@ def normalize(data: dict) -> tuple[str, str, list[dict]]:
                 f"Expected analysis.json `stacks` to contain exactly one entry; got {stacks!r}"
             )
         stack = stacks[0]
+        display_name = (data.get("display_names") or {}).get(stack) or display_name_for(stack)
         ts = data.get("timestamp", "")
         prompts: list[dict] = []
         for pid, p in data["per_prompt"].items():
@@ -100,7 +83,7 @@ def normalize(data: dict) -> tuple[str, str, list[dict]]:
                     "peak_context":         r["peak_context"],
                 },
             })
-        return ts, stack, prompts
+        return ts, stack, display_name, prompts
 
     raise SystemExit(
         f"Unrecognized analysis.json schema; top-level keys: {sorted(data.keys())}"
@@ -173,12 +156,14 @@ def pick_notable(prompts: list[dict], limit: int = 8) -> list[dict]:
     return chosen
 
 
-def render(run_dir: Path) -> str:
+def render(run_dir: Path, verbose: bool = False) -> str:
     data = json.loads((run_dir / "analysis.json").read_text())
-    ts, stack, prompts = normalize(data)
+    ts, stack, _label, prompts = normalize(data)
     if not ts:
         ts = run_dir.name
-    label = display_name_for(stack)
+
+    platform = platform_name(run_dir)
+    headline_name = headline_display_name(stack, data)
 
     prompts_by_id = {int(p["prompt_id"]): p for p in prompts}
     sorted_ids = sorted(prompts_by_id.keys())
@@ -186,25 +171,10 @@ def render(run_dir: Path) -> str:
 
     L: list[str] = []
 
-    L.append(f"# Benchmark Analysis — {label} — Run {ts}")
+    L.append(f"# {platform} MCP - {headline_name} benchmark analysis")
     L.append("")
-    L.append(f"**Scope:** {len(prompts)} prompts × {label}, "
-             "graded against precomputed session summaries (`analysis_data.json`).")
+    L.append(f"**Scope:** {len(prompts)} prompts.")
     L.append("")
-
-    hintas_params = load_hintas_params(run_dir)
-    if hintas_params:
-        L.append("## MCP configuration")
-        L.append("")
-        L.append("> The variant Hintas server runs with the parameters below. When "
-                 "comparing two Hintas runs, this is the block to scan first — these "
-                 "are the only knobs that change between them.")
-        L.append("")
-        L.append("| Parameter | Value |")
-        L.append("|:----------|:-----:|")
-        for key, label_str in HINTAS_PARAM_LABELS:
-            L.append(f"| `{label_str}` | **{fmt_param_value(hintas_params.get(key))}** |")
-        L.append("")
 
     L.append("## Verdict legend")
     L.append("")
@@ -213,35 +183,6 @@ def render(run_dir: Path) -> str:
     L.append("- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** "
              "(\"user doesn't exist\", \"page not shared\", \"integration lacks access\", server refused).")
     L.append("- `⚠ ERROR` — infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).")
-    L.append("")
-
-    # ── Per-prompt results table ──────────────────────────────────────
-    L.append("## Per-prompt results")
-    L.append("")
-    L.append("| ID | Title | Diff | Verdict | Time | Tokens | Tool calls | Tool fails |")
-    L.append("|---:|:------|:----:|:-------:|-----:|-------:|-----------:|-----------:|")
-    for pid in sorted_ids:
-        p = prompts_by_id[pid]
-        m = p["metrics"]
-        v = f"{VERDICT_GLYPH[p['verdict']]} {p['verdict']}"
-        title = p["title"].replace("|", "\\|")
-        L.append(f"| {pid} | {title} | {p['difficulty']} | {v} | "
-                 f"{fmt_float(m['wall_clock_s'], 1)}s | "
-                 f"{fmt_int(m['total_tokens'])} | "
-                 f"{m['tool_calls_total']} | {m['tool_calls_failed']} |")
-    L.append("")
-
-    # ── Initial vs peak context ─────────────────────────────────────
-    L.append("## Initial vs peak context")
-    L.append("")
-    L.append("| ID | Title | Initial | Peak |")
-    L.append("|---:|:------|--------:|-----:|")
-    for pid in sorted_ids:
-        p = prompts_by_id[pid]
-        m = p["metrics"]
-        title = p["title"].replace("|", "\\|")
-        L.append(f"| {pid} | {title} | "
-                 f"{fmt_int(m['initial_context'])} | {fmt_int(m['peak_context'])} |")
     L.append("")
 
     # ── Aggregates ──────────────────────────────────────────────────
@@ -289,6 +230,42 @@ def render(run_dir: Path) -> str:
                  f"{row['partial']}/{row['fail']}/{row['error']} |")
     L.append("")
 
+    if verbose:
+        # ── Per-prompt results table (collapsed by default) ─────────────
+        L.append("<details>")
+        L.append("<summary><h2 style=\"display:inline\">Per-prompt results</h2></summary>")
+        L.append("")
+        L.append("| ID | Title | Diff | Verdict | Time | Tokens | Tool calls | Tool fails |")
+        L.append("|---:|:------|:----:|:-------:|-----:|-------:|-----------:|-----------:|")
+        for pid in sorted_ids:
+            p = prompts_by_id[pid]
+            m = p["metrics"]
+            v = f"{VERDICT_GLYPH[p['verdict']]} {p['verdict']}"
+            title = p["title"].replace("|", "\\|")
+            L.append(f"| {pid} | {title} | {p['difficulty']} | {v} | "
+                     f"{fmt_float(m['wall_clock_s'], 1)}s | "
+                     f"{fmt_int(m['total_tokens'])} | "
+                     f"{m['tool_calls_total']} | {m['tool_calls_failed']} |")
+        L.append("")
+        L.append("</details>")
+        L.append("")
+
+        # ── Initial vs peak context (collapsed by default) ──────────────
+        L.append("<details>")
+        L.append("<summary><h2 style=\"display:inline\">Initial vs peak context</h2></summary>")
+        L.append("")
+        L.append("| ID | Title | Initial | Peak |")
+        L.append("|---:|:------|--------:|-----:|")
+        for pid in sorted_ids:
+            p = prompts_by_id[pid]
+            m = p["metrics"]
+            title = p["title"].replace("|", "\\|")
+            L.append(f"| {pid} | {title} | "
+                     f"{fmt_int(m['initial_context'])} | {fmt_int(m['peak_context'])} |")
+        L.append("")
+        L.append("</details>")
+        L.append("")
+
     # ── Notable failures ────────────────────────────────────────────
     L.append("## Notable failures")
     L.append("")
@@ -308,10 +285,12 @@ def render(run_dir: Path) -> str:
 def main():
     ap = argparse.ArgumentParser(description="Render analysis.md from analysis.json")
     ap.add_argument("run_dir", type=Path)
+    ap.add_argument("--verbose", action="store_true",
+                    help="Include per-prompt detail tables (default: summarized).")
     args = ap.parse_args()
     if not (args.run_dir / "analysis.json").exists():
         raise SystemExit(f"analysis.json not found in {args.run_dir}")
-    md = render(args.run_dir)
+    md = render(args.run_dir, verbose=args.verbose)
     out = args.run_dir / "analysis.md"
     out.write_text(md)
     print(f"wrote {out} ({len(md)} bytes)")

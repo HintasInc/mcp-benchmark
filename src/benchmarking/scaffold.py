@@ -3,10 +3,10 @@
 scaffold.py — generate the skeleton for a new benchmark platform.
 
 Creates:
-  platforms/<name>/<name>.toml
-  platforms/<name>/{api,prompts,scripts,state}/
-  platforms/<name>/prompts/benchmark_prompts.json
-  platforms/<name>/scripts/{reset,seed,verify}_workspace.py    (TODO stubs)
+  experiments/<name>/<name>.toml
+  experiments/<name>/{api,prompts,scripts,state}/
+  experiments/<name>/prompts/benchmark_prompts.json
+  experiments/<name>/scripts/{reset,seed,verify}_workspace.py    (TODO stubs)
   src/benchmarking/analysis/per_run/<name>_analysis_prompt.md  (TODO placeholder)
 
 MCP server registration is NOT scaffolded — register the MCP server inside
@@ -53,7 +53,7 @@ downstream_token_env = "__DOWNSTREAM_TOKEN_ENV__"
 
 [paths]
 # All paths are resolved relative to this manifest's directory
-# (platforms/__NAME__/).
+# (experiments/__NAME__/).
 prompts_file         = "prompts/benchmark_prompts.json"
 reset_script         = "scripts/reset_workspace.py"
 seed_script          = "scripts/seed_workspace.py"

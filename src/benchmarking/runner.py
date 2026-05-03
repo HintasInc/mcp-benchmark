@@ -4,8 +4,8 @@ from __future__ import annotations
 runner.py  —  Capability Benchmark Runner (Platform-agnostic, Single Stack)
 ================================================================
 Runs the benchmark loop against ONE stack declared by a platform manifest
-(platforms/<name>/<name>.toml). The stack is selected via --stack. Tokens are
-read from platforms/<name>/.env / <repo>/.env, never from the command line.
+(experiments/<name>/<name>.toml). The stack is selected via --stack. Tokens are
+read from experiments/<name>/.env / <repo>/.env, never from the command line.
 
 For each eligible prompt:
   1. Reset the workspace
@@ -59,7 +59,7 @@ def parse_args() -> tuple[argparse.Namespace, Platform]:
     p = argparse.ArgumentParser(description="MCP Capability Benchmark Runner (Single Stack)")
     p.add_argument("--platform",          default="slack",
                    choices=available_platforms() or None,
-                   help="Platform manifest under platforms/ (default: slack)")
+                   help="Platform manifest under experiments/ (default: slack)")
     p.add_argument("--stack",             required=True,
                    choices=platform.stack_names,
                    help="Which stack from the platform manifest to benchmark")
@@ -67,7 +67,7 @@ def parse_args() -> tuple[argparse.Namespace, Platform]:
     p.add_argument("--reset-script",      default=str(platform.reset_script))
     p.add_argument("--verify-script",     default=str(platform.verify_script))
     p.add_argument("--output-dir",        default=str(platform.output_dir),
-                   help="Where run directories are written (default: platforms/<platform>/runs)")
+                   help="Where run directories are written (default: experiments/<platform>/runs)")
     p.add_argument("--difficulty",        nargs="+",  help="e.g. L1 L2")
     p.add_argument("--prompt-ids",        nargs="+",  help="specific prompt IDs to run (e.g. 1 2 3 22)")
     p.add_argument("--category",          nargs="+",  help="e.g. retrieval write search")

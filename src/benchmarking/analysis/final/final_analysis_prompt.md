@@ -140,9 +140,9 @@ Empty list (`[]`) is fine if nothing notable happened.
 
 {{PLATFORM_NOTES}}
 
-## Comparison rules (token / time / peak context)
+## Comparison rules (token / time)
 
-A prompt's `total_tokens`, `wall_clock_s`, `peak_context`, and `initial_context` are **only counted in cross-stack averages and totals when BOTH stacks earned PASS** for that prompt. If either side is PARTIAL, FAIL, or ERROR for a prompt, **exclude that prompt from comparison metrics** but still count it in verdict tallies and tool-call tallies.
+A prompt's `total_tokens` and `wall_clock_s` are **only counted in cross-stack averages and totals when BOTH stacks earned PASS** for that prompt. If either side is PARTIAL, FAIL, or ERROR for a prompt, **exclude that prompt from comparison metrics** but still count it in verdict tallies and tool-call tallies.
 
 Tool-call tallies (`tools_passed`, `tools_failed`, `tools_partial`) are **never excluded** — every tool call by every stack is counted, regardless of the prompt's verdict.
 
@@ -155,8 +155,6 @@ Compute the following per-stack derived numbers:
 - `tokens_per_tool_call` (per prompt) = `total_tokens / max(1, tool_calls.total)`
 - `comparable_total_tokens`     = sum of `total_tokens` over both-PASS prompts only
 - `comparable_avg_wall_clock_s` = mean of `wall_clock_s` over both-PASS prompts only
-- `comparable_avg_peak_context` = mean of `peak_context` over both-PASS prompts only
-- `comparable_avg_initial_context` = mean of `initial_context` over both-PASS prompts only
 - `comparable_avg_tokens_per_prompt`     = `comparable_total_tokens / |both-PASS|`
 - `comparable_avg_tokens_per_tool_call`  = sum of `total_tokens` over both-PASS / sum of `tool_calls.total` over both-PASS
 
@@ -189,8 +187,6 @@ Build the JSON in memory, write it once, then write the markdown from the same i
         "tools_partial": N,
         "tools_total":   N,
         "tokens_per_tool_call": F,
-        "initial_context": N,
-        "peak_context":    N,
         "total_tokens":    N,
         "wall_clock_s":    N,
         "comparable":      true|false
@@ -206,8 +202,6 @@ Build the JSON in memory, write it once, then write the markdown from the same i
       "tool_pass_rate": F,
       "comparable_n":            N,
       "comparable_total_tokens": N,
-      "comparable_avg_initial_context": F,
-      "comparable_avg_peak_context":    F,
       "comparable_avg_wall_clock_s":    F,
       "comparable_avg_tokens_per_prompt":    F,
       "comparable_avg_tokens_per_tool_call": F
@@ -220,7 +214,6 @@ Build the JSON in memory, write it once, then write the markdown from the same i
     "winner": "{{BASELINE_DISPLAY_NAME}}" | "{{VARIANT_DISPLAY_NAME}}" | "Tie",
     "speed_winner":            "...", "speed_margin_pct":   F,
     "tokens_winner":           "...", "tokens_margin_pct":  F,
-    "peak_context_winner":     "...", "peak_context_margin_pct": F,
     "accuracy_winner":         "...", "accuracy_margin_pp": F,
     "tool_reliability_winner": "...",
     "summary": "2–4 sentence cross-stack conclusion"
@@ -230,7 +223,7 @@ Build the JSON in memory, write it once, then write the markdown from the same i
 
 `pass_rate` counts PASS only (strict). `tool_pass_rate` = `tools_passed / max(1, tools_total)`.
 
-Margins are absolute percentages (positive numbers), with the `_winner` field naming who won. Use `"Tie"` when the two values are within 1% (or 0.5pp for accuracy / tool pass rate). The overall `winner` is whichever stack wins more of the five categories (Accuracy, Speed, Tokens, Peak context, Tool reliability); fall back to `"Tie"` when the count is even.
+Margins are absolute percentages (positive numbers), with the `_winner` field naming who won. Use `"Tie"` when the two values are within 1% (or 0.5pp for accuracy / tool pass rate). The overall `winner` is whichever stack wins more of the four categories (Accuracy, Speed, Tokens, Tool reliability); fall back to `"Tie"` when the count is even.
 
 ### 2. `{{OUTPUT_DIR}}/final_analysis.md`
 
@@ -259,15 +252,15 @@ Numerical tables first; narrative only where it explains a number. Use pipe-deli
 
    | Metric | {{BASELINE_DISPLAY_NAME}} | {{VARIANT_DISPLAY_NAME}} | Δ (B − V) |
 
-   Rows: Total tokens, Avg tokens / prompt, Avg tokens / tool call, Avg peak context, Avg initial context, Avg wall-clock (s).
+   Rows: Total tokens, Avg tokens / prompt, Avg tokens / tool call, Avg wall-clock (s).
 
 8. **Final verdict**
 
    | Category | Winner | Margin |
 
-   Rows: Accuracy (pass rate), Speed (avg wall-clock), Token efficiency (comparable total), Peak context (comparable avg), Tool reliability (tool pass rate).
+   Rows: Accuracy (pass rate), Speed (avg wall-clock), Token efficiency (comparable total), Tool reliability (tool pass rate).
 
-   One-line summary: `<Winner> wins <X>/5 categories.`
+   One-line summary: `<Winner> wins <X>/4 categories.`
 
 ## Rules
 
