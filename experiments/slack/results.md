@@ -1,11 +1,11 @@
-# Combined Benchmark Comparison — Slack — 20260503_1541
+# Benchmark Comparison — Slack
 
-**Scope:** 48 prompts × 2 stacks (baseline + 1 variant).
+**Scope:** 48 prompts
 
 ## Measured against
 
-- **Slack's official MCP** (baseline) — [`20260429_205001__slack`](runs/20260429_205001__slack/analysis.md)
-- **Hintas's Slack MCP** (variant) — [`20260430_100018__hintas__topk10_batch-off_max10_rag-off`](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)
+- **Slack's official MCP** (baseline) — `[20260429_205001__slack](runs/20260429_205001__slack/analysis.md)`
+- **Hintas's Slack MCP** (variant) — `[20260430_100018__hintas__topk10_batch-off_max10_rag-off](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
 
 ## Verdict legend
 
@@ -16,23 +16,27 @@
 
 ## Verdict tallies
 
-| Metric | Slack's official MCP | Hintas's Slack MCP |
-|:-------|---:|---:|
-| PASS | 11 | 27 |
-| PARTIAL | 10 | 3 |
-| FAIL | 27 | 5 |
-| ERROR | 0 | 0 |
-| Success rate | 23% | 77% |
+
+| Metric       | Slack's official MCP | Hintas's Slack MCP |
+| ------------ | -------------------- | ------------------ |
+| PASS         | 11                   | 27                 |
+| PARTIAL      | 10                   | 3                  |
+| FAIL         | 27                   | 5                  |
+| ERROR        | 0                    | 0                  |
+| Success rate | 23%                  | 77%                |
+
 
 ## Tool-call tallies
 
-| Metric | Slack's official MCP | Hintas's Slack MCP |
-|:-------|---:|---:|
-| Tools complete | 270 | 178 |
-| Tools failed | 3 | 0 |
-| Tools partial | 0 | 0 |
-| Total | 273 | 178 |
-| Tool pass rate | 99% | 100% |
+
+| Metric         | Slack's official MCP | Hintas's Slack MCP |
+| -------------- | -------------------- | ------------------ |
+| Tools complete | 270                  | 178                |
+| Tools failed   | 3                    | 0                  |
+| Tools partial  | 0                    | 0                  |
+| Total          | 273                  | 178                |
+| Tool pass rate | 99%                  | 100%               |
+
 
 ## Global comparable metrics
 
@@ -41,11 +45,14 @@
 - Comparable prompt IDs: `3, 4, 5, 13, 20, 23, 31` (count: 7)
 - Excluded count: 41
 
-| Metric | Slack MCP - Official | Slack MCP - Hintas | Δ Hintas - Official |
-|:-------|---:|---:|---:|
-| Total tokens | 4,132 | 11,684 | +7,552 |
-| Avg tokens / prompt | 590 | 1,669 | +1,079 |
-| Avg tokens / tool call | 243 | 377 | +134 |
-| Avg wall-clock (s) | 16.9 | 44.2 | +27.2 |
-| Success rate | 23% | 77% | +54.2 pp |
-| Tool pass rate | 99% | 100% | +1.1 pp |
+
+| Metric                 | Slack MCP - Official | Slack MCP - Hintas | Δ Hintas - Official |
+| ---------------------- | -------------------- | ------------------ | ------------------- |
+| Total tokens           | 4,132                | 11,684             | +7,552              |
+| Avg tokens / prompt    | 590                  | 1,669              | +1,079              |
+| Avg tokens / tool call | 243                  | 377                | +134                |
+| Avg wall-clock (s)     | 16.9                 | 44.2               | +27.2               |
+| Success rate           | 23%                  | 77%                | +54.2 pp            |
+| Tool pass rate         | 99%                  | 100%               | +1.1 pp             |
+
+
