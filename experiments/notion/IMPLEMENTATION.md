@@ -1,6 +1,6 @@
 # Notion benchmark: implementation
 
-Two parallel Notion workspaces, with one mirroring the other, let us A/B the **Notion MCP - Official** against the **Notion MCP - Hintas** on identical state. Pick a stack with `--stack notion` (baseline) or `--stack hintas` (variant); see the [parent README](../../README.md) and [root IMPLEMENTATION.md](../../IMPLEMENTATION.md) for orchestrator usage.
+Two parallel Notion workspaces, with one mirroring the other, allow A/B testing of the **Notion MCP - Official** against the **Notion MCP - Hintas** on identical state. Pick a stack with `--stack notion` (baseline) or `--stack hintas` (variant); see the [parent README](../../README.md) and [root IMPLEMENTATION.md](../../IMPLEMENTATION.md) for orchestrator usage.
 
 ## Why two workspaces
 

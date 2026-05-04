@@ -13,8 +13,11 @@ __pycache__/
 .claude/settings.local.json
 **/*.local.json
 
+# workspace state files
+**/workspace_state_*.json
+
 # Benchmark outputs (anchored to experiments/ so we don't accidentally ignore
-# src/benchmarking/analysis/final/, etc.)
 /experiments/*/runs/**
-!/experiments/*/runs/**/analysis.md
-/archive/
+**/archive/
+**/final/
+!experiments/*/runs/**/analysis.md

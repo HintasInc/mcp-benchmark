@@ -19,9 +19,9 @@
 
 ---
 
-The main purpose of this benchmark is to compare the official MCPs offered by the softwares vs the  MCPs built by Hintas for those softwares. We take popular softwares like Slack, Notion for this test.
+The main purpose of this benchmark is to compare the official MCPs offered by the softwares vs the MCPs built by Hintas for those softwares. The test covers popular softwares like Slack and Notion.
 
-For each platform, we answer the same prompts under identical conditions, once using the platform's official MCP (baseline) and then the MCP provided by Hintas (variant). The benchmark measures pass rate, token usage, tool-call count, wall time, and failure modes, then reports baseline − variant deltas across the prompt suite.
+For each platform, the same prompts run under identical conditions, once against the platform's official MCP (baseline) and then against the MCP provided by Hintas (variant). The benchmark measures pass rate, token usage, tool-call count, wall time, and failure modes, then reports baseline minus variant deltas across the prompt suite.
 
 ## Experiments and Results
 
@@ -29,7 +29,7 @@ Each platform was run head-to-head over a fixed prompt suite (48 prompts for Sla
 
 ### Slack
 
-| Metric         | Slack MCP — Official | Slack MCP — Hintas | Δ (Hintas − Official) |
+| Metric         | Slack MCP - Official | Slack MCP - Hintas | Δ (Hintas − Official) |
 | :------------- | -------------------: | -----------------: | --------------------: |
 | Success rate   |                  23% |                77% |             +54.2 pp  |
 | Speed          |               16.9 s |             44.2 s |              +27.2 s  |
@@ -39,7 +39,7 @@ Full report: [experiments/slack/results.md](experiments/slack/results.md)
 
 ### Notion
 
-| Metric         | Notion MCP — Official | Notion MCP — Hintas | Δ (Hintas − Official) |
+| Metric         | Notion MCP - Official | Notion MCP - Hintas | Δ (Hintas − Official) |
 | :------------- | --------------------: | ------------------: | --------------------: |
 | Success rate   |                   68% |                 80% |             +12.5 pp  |
 | Speed          |                45.4 s |              48.2 s |               +2.8 s  |
