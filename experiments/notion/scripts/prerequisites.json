@@ -1,0 +1,6 @@
+{
+  "P08_LEADS_ONLY": "page_id_for_leads_only",
+  "P11_LEADS_NOTES": "page_id_for_leads_notes",
+  "DB_PRESS_CONTACTS": "database_id_for_press_contacts",
+  "U09EMBER": "user_id_for_ember"
+}

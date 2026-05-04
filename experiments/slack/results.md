@@ -1,23 +1,23 @@
-# Benchmark Comparison — Slack
+# Benchmark Comparison: Slack
 
 **Scope:** 48 prompts
 
 ## Measured against
 
-- **Slack's official MCP** (baseline) — `[20260429_205001__slack](runs/20260429_205001__slack/analysis.md)`
-- **Hintas's Slack MCP** (variant) — `[20260430_100018__hintas__topk10_batch-off_max10_rag-off](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
+- **Slack MCP - Official** (baseline): `[20260429_205001__slack](runs/20260429_205001__slack/analysis.md)`
+- **Slack MCP - Hintas** (variant): `[20260430_100018__hintas__topk10_batch-off_max10_rag-off](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
 
 ## Verdict legend
 
-- `✓ PASS` — every success criterion met; usable answer; no blocking tool failure.
-- `◐ PARTIAL` — some criteria met, others blocked; partial multi-step work.
-- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** 
-- `⚠ ERROR` — infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).
+- `✓ PASS`: every success criterion met, with a usable answer and no blocking tool failure.
+- `◐ PARTIAL`: some criteria met, others blocked; partial multi-step work.
+- `✗ FAIL`: core task not accomplished. **Includes environmental rejections.**
+- `⚠ ERROR`: infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).
 
 ## Verdict tallies
 
 
-| Metric       | Slack's official MCP | Hintas's Slack MCP |
+| Metric       | Slack MCP - Official | Slack MCP - Hintas |
 | ------------ | -------------------- | ------------------ |
 | PASS         | 11                   | 27                 |
 | PARTIAL      | 10                   | 3                  |
@@ -29,7 +29,7 @@
 ## Tool-call tallies
 
 
-| Metric         | Slack's official MCP | Hintas's Slack MCP |
+| Metric         | Slack MCP - Official | Slack MCP - Hintas |
 | -------------- | -------------------- | ------------------ |
 | Tools complete | 270                  | 178                |
 | Tools failed   | 3                    | 0                  |
@@ -40,7 +40,7 @@
 
 ## Global comparable metrics
 
-> For each variant, this restricts to prompts where **both** the baseline and that variant passed — the fair apples-to-apples subset for token and speed comparisons.
+> For each variant, this restricts to prompts where **both** the baseline and that variant passed. That's the fair apples-to-apples subset for token and speed comparisons.
 
 - Comparable prompt IDs: `3, 4, 5, 13, 20, 23, 31` (count: 7)
 - Excluded count: 41

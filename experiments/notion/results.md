@@ -1,18 +1,18 @@
-# Benchmark Comparison — Notion
+# Benchmark Comparison: Notion
 
 **Scope:** 56 prompts
 
 ## Measured against
 
-- **Notion's official MCP** (baseline) — `[20260429_205418__notion](runs/20260429_205418__notion/analysis.md)`
-- **Hintas's Notion MCP** (variant) — `[20260429_205444__hintas__topk10_batch-off_max10_rag-off](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
+- **Notion MCP - Official** (baseline): `[20260429_205418__notion](runs/20260429_205418__notion/analysis.md)`
+- **Notion MCP - Hintas** (variant): `[20260429_205444__hintas__topk10_batch-off_max10_rag-off](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
 
 ## Verdict legend
 
-- `✓ PASS` — every success criterion met; usable answer; no blocking tool failure.
-- `◐ PARTIAL` — some criteria met, others blocked; partial multi-step work.
-- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** 
-- `⚠ ERROR` — infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).
+- `✓ PASS`: every success criterion met, with a usable answer and no blocking tool failure.
+- `◐ PARTIAL`: some criteria met, others blocked; partial multi-step work.
+- `✗ FAIL`: core task not accomplished. **Includes environmental rejections.**
+- `⚠ ERROR`: infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).
 
 ## Verdict tallies
 
@@ -40,7 +40,7 @@
 
 ## Global comparable metrics
 
-> For each variant, this restricts to prompts where **both** the baseline and that variant passed — the fair apples-to-apples subset for token and speed comparisons.
+> For each variant, this restricts to prompts where **both** the baseline and that variant passed. That's the fair apples-to-apples subset for token and speed comparisons.
 
 - Comparable prompt IDs: `1, 2, 4, 5, 6, 8, 9, 10, 13, 14, 15, 16, 17, 18, 20, 22, 23, 24, 25, 27, 32, 33, 34, 36, 37, 41, 42, 44, 45, 47, 49, 50, 53, 55, 58` (count: 35)
 - Excluded count: 21

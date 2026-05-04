@@ -2,7 +2,7 @@
 
 Use this when you're adding a platform, debugging the pipeline, or reading run output.
 
-> **Before running anything**, complete the per-platform setup — workspaces, tokens, manual UI state, and Claude config dirs. The harness assumes both stacks are already provisioned.
+> **Before running anything**, complete the per-platform setup: workspaces, tokens, manual UI state, and Claude config dirs. The harness assumes both stacks are already provisioned.
 >
 > - Slack: [experiments/slack/README.md](experiments/slack/README.md)
 > - Notion: [experiments/notion/README.md](experiments/notion/README.md)
@@ -57,13 +57,11 @@ experiments/<platform>/
     └── combined_comparison.md   # N-way (combine)
 ```
 
-Run-dir naming: `<timestamp>__<stack>` for baseline; variant runs append a Hintas param summary (e.g. `__topk10_batch-off_max5_rag-off`) so repeat runs against different server configs don't collide.
+Run-dir naming uses `<timestamp>__<stack>` for the baseline. Variant runs append a Hintas param summary (e.g. `__topk10_batch-off_max5_rag-off`) so repeat runs against different server configs don't collide.
 
 ## Manifest schema
 
-Each platform is described by `experiments/<name>/<name>.toml`. Adding a platform is data-only — no orchestrator changes.
-
-Each session is locked to its stack's MCP: built-in tools are disabled and only `mcp__<server>__*` is allowed, so the agent must succeed or fail on the MCP under test.
+Each platform is described by `experiments/<name>/<name>.toml`. Adding a platform is data-only, with no orchestrator changes needed. Each session is locked to its stack's MCP: built-in tools are disabled and only `mcp__<server>__*` is allowed, so the agent must succeed or fail on the MCP under test.
 
 ## Adding a new platform
 

@@ -29,7 +29,7 @@ prereq_file_template = "scripts/prerequisites_{stack}.local.json"
 # stacks[0] is the baseline; stacks[1] is the variant under evaluation.
 [[stacks]]
 name               = "notion"
-display_name       = "Notion's official MCP"
+display_name       = "Notion MCP - Official"
 config_dir_env     = "NOTION_CONFIG_DIR"
 config_dir_default = "~/.claude-notion"
 token_env          = "NOTION_TOKEN"
@@ -37,7 +37,7 @@ mcp_server         = "notion"
 
 [[stacks]]
 name               = "hintas"
-display_name       = "Hintas's Notion MCP"
+display_name       = "Notion MCP - Hintas"
 config_dir_env     = "NOTION_HINTAS_CONFIG_DIR"
 config_dir_default = "~/.claude-notion-hintas"
 token_env          = "HINTAS_TOKEN"

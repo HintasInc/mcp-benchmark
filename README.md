@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <strong>Official platform MCPs vs MCPs by <a href="https://hintas.com">Hintas</a> — head-to-head, on the same prompts, against mirrored workspaces.</strong>
+  <strong>Official platform MCPs vs MCPs by <a href="https://hintas.com">Hintas</a>, running head-to-head on the same prompts against mirrored workspaces.</strong>
 </p>
 
 <p align="center">
@@ -19,11 +19,13 @@
 
 ---
 
-For each platform, two stacks — the platform's official MCP (baseline) and the MCP provided by Hintas (variant) — answer the same prompts under identical conditions. The harness measures pass rate, token usage, tool-call count, wall time, and failure modes, then reports baseline − variant deltas across the prompt suite.
+The main purpose of this benchmark is to compare the official MCPs offered by the softwares vs the  MCPs built by Hintas for those softwares. We take popular softwares like Slack, Notion for this test.
+
+For each platform, we answer the same prompts under identical conditions, once using the platform's official MCP (baseline) and then the MCP provided by Hintas (variant). The benchmark measures pass rate, token usage, tool-call count, wall time, and failure modes, then reports baseline − variant deltas across the prompt suite.
 
 ## Experiments and Results
 
-Each platform was run head-to-head over a fixed prompt suite (48 prompts for Slack, 58 for Notion), with the official MCP and the Hintas MCP answering the same prompts against mirrored workspaces. The tables below summarize the per-dimension verdicts; full per-prompt breakdowns live in each platform's report.
+Each platform was run head-to-head over a fixed prompt suite (48 prompts for Slack, 58 for Notion), with the platform's official MCP and the MCP built for them by Hintas answering the same prompts against mirrored workspaces. The tables below summarize the per-dimension verdicts, and full per-prompt breakdowns live in each platform's report.
 
 ### Slack
 
@@ -68,13 +70,13 @@ uv run benchmark run --platform slack --stack slack    # baseline
 uv run benchmark run --platform slack --stack hintas   # variant
 ```
 
-Tokens are read from `experiments/<name>/.env` — see the platform README for the required variables.
+Tokens are read from `experiments/<name>/.env`. See the platform README for the required variables.
 
 Run `uv run benchmark --help` for the full subcommand and flag list.
 
 ## Implementation
 
-For the harness internals — pipeline subcommands, output layout, manifest schema, and how to add a new platform — see [IMPLEMENTATION.md](IMPLEMENTATION.md).
+For the harness internals (pipeline subcommands, output layout, manifest schema, and how to add a new platform), see [IMPLEMENTATION.md](IMPLEMENTATION.md).
 
 ---
 

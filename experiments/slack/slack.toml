@@ -29,7 +29,7 @@ state_file_template = "scripts/workspace_state_{stack}.json"
 # the variant under evaluation. Report deltas are computed as baseline − variant.
 [[stacks]]
 name               = "slack"
-display_name       = "Slack's official MCP"
+display_name       = "Slack MCP - Official"
 config_dir_env     = "SLACK_CONFIG_DIR"
 config_dir_default = "~/.claude-slack"
 token_env          = "SLACK_TOKEN"
@@ -37,7 +37,7 @@ mcp_server         = "slack"
 
 [[stacks]]
 name               = "hintas"
-display_name       = "Hintas's Slack MCP"
+display_name       = "Slack MCP - Hintas"
 config_dir_env     = "SLACK_HINTAS_CONFIG_DIR"
 config_dir_default = "~/.claude-hintas"
 token_env          = "HINTAS_TOKEN"
