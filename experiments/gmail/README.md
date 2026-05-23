@@ -6,7 +6,6 @@ This benchmark ran the Gmail MCP - Official head-to-head against the Gmail MCP -
 
 - **Gmail MCP - Official** (baseline): [`20260520_190538__gmail`](runs/20260520_190538__gmail/analysis.md)
 - **Gmail MCP - Hintas** (variant): [`20260522_170409__hintas__topk10_batch-off_max10_rag-off`](runs/20260522_170409__hintas__topk10_batch-off_max10_rag-off/analysis.md)
-- **Cross-stack rollup**: [`final/20260523_1147/final_analysis.md`](final/20260523_1147/final_analysis.md)
 
 ## Verdict legend
 
