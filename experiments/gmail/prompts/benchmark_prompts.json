@@ -1,0 +1,853 @@
+{
+  "benchmark": "Hintas Gmail Capability Benchmark",
+  "version": "v1",
+  "ground_truth_reference": "workspace_state.md",
+  "workspace_plan": "workspace",
+  "comparison_goal": "Compare OpenAPI-direct execution vs MCP-mediated execution of the Gmail API across matched prompts. Each prompt is replayed on both stacks; the same success_criteria apply. Difficulty (L1→L5) and explicit cross-entity orchestration (threads × messages × drafts × labels × filters × settings) are designed to surface differences in tool discovery, parameter formation, search-query construction, pagination, partial-failure handling, and capability-coverage between the two stacks. Prompts are drawn from common day-to-day Gmail usage and from operations the Gmail API exposes but a thin MCP wrapper may not — the goal is fair coverage of the API surface, not to favor either stack.",
+  "agent_identity": {
+    "acts_as_user_id": "{{ID_U05CLAUDE}}",
+    "acts_as_email": "{{EMAIL_U05CLAUDE}}",
+    "display_name": "{{NAME_U05CLAUDE}}",
+    "role": "Mailbox owner. The agent acts on its own Gmail mailbox — NOT as a Google Workspace admin and NOT via domain-wide delegation.",
+    "token_class": "OAuth 2.0 user token scoped to the Gmail API. All seeded sent items, drafts, and label applications are authored by the agent under single-token operation; other people exist only as inbound senders or recipients on the agent's mailbox.",
+    "notes": "The agent reads and modifies only its own mailbox at userId='me'. All references to 'list/search/read/send/label/archive/trash' apply to this single mailbox."
+  },
+  "granted_scopes": [
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.labels",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.metadata"
+  ],
+  "optional_scopes_for_extension_prompts": {
+    "https://www.googleapis.com/auth/gmail.settings.basic": "Enables vacation responder, IMAP/POP, filters, send-as aliases (non-S/MIME), and forwarding-address management. Needed by extension prompts on settings.",
+    "https://www.googleapis.com/auth/gmail.settings.sharing": "Enables auto-forwarding setup and forwarding-address creation. Needed by auto-forwarding extension prompts."
+  },
+  "unavailable_via_api": {
+    "workspace_admin_operations": "Gmail API does not expose Google Workspace admin operations (creating Gmail accounts, modifying another user's mailbox without domain-wide delegation, setting org-wide policies). These require the Admin SDK with an admin OAuth flow.",
+    "smime_certificate_generation": "S/MIME certificate generation and signing key creation are not exposed by the Gmail API — only insert / list / delete / setDefault on an already-issued S/MIME config (gmail.users.settings.sendAs.smimeInfo).",
+    "client_side_encryption_policies": "Workspace client-side-encryption (CSE) keys, identity providers, and per-domain encryption policies are not exposed via the Gmail API.",
+    "label_color_for_system_labels": "System labels (INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, IMPORTANT, UNREAD, CATEGORY_*) cannot be renamed, recolored, or deleted via labels.update / labels.delete — Gmail rejects the mutation with a 400."
+  },
+  "setup_instructions": [
+    "STEP 1 — Provision a fresh Gmail mailbox for {{EMAIL_U05CLAUDE}}. Do NOT run against production — prompts read, label, archive, trash, untrash, delete, draft, send, reply, forward, create/delete filters, and toggle vacation/forwarding settings on this mailbox.",
+    "STEP 2 — Seed inbound threads, sent items, drafts, user-defined labels, filters, send-as aliases, and the vacation responder exactly as described in workspace_state.md (v1). Anchor wall-clock: benchmark_now = 2026-04-19T10:00:00-07:00 (Sunday). Seeded message internalDate timestamps are computed as offsets from this anchor.",
+    "STEP 3 — Wire the agent-under-test to (a) a Gmail MCP server authenticated with the user OAuth token for {{EMAIL_U05CLAUDE}} and (b) a raw OpenAPI stack authenticated with the same token. Both stacks must see the same scope set. Run every prompt against both stacks to produce the comparison.",
+    "STEP 4 — Reset the workspace to the exact v1 snapshot before every single prompt run. Many prompts mutate state; do not chain prompts.",
+    "STEP 5 — For each (prompt × stack) cell, record: (a) success = ALL success_criteria met, (b) wall-clock seconds, (c) number of tool / HTTP calls, (d) input-token usage, (e) output-token usage, (f) number of clarifying questions the agent asked (should be 0 for most), (g) whether the agent respected access-boundary and capability-coverage expectations.",
+    "STEP 6 — Date-resolution contract: the agent MUST resolve 'today' / 'tomorrow' / 'this week' / 'last 30 days' / 'next Monday' / other relative-time expressions against benchmark_now, NOT the host wall clock. Otherwise prompts referencing relative time windows will drift.",
+    "STEP 7 — Naming contract: prompts refer to people by first name and to user-defined labels by their human-readable name. The agent resolves senders to email addresses via thread / message headers and resolves label names to label IDs via labels.list."
+  ],
+  "global_assumptions": [
+    "Mailbox: a single Gmail account for {{EMAIL_U05CLAUDE}} ({{NAME_U05CLAUDE}}). Operations target userId='me'.",
+    "Agent identity: {{NAME_U05CLAUDE}}, the mailbox owner. The agent cannot read other users' mailboxes.",
+    "People referenced by first name (with their email addresses): {{NAME_U01MIRANDA}} Okonkwo ({{EMAIL_U01MIRANDA}}), {{NAME_U02JARED}} Blackwood ({{EMAIL_U02JARED}}), Saul Rivera ({{EMAIL_U03PINKMAN}}), {{NAME_U04LAGOON}} Takahashi ({{EMAIL_U04LAGOON}}), {{NAME_U06DEVON}} Park ({{EMAIL_U06DEVON}}), {{NAME_U07RHEA}} Kapoor ({{EMAIL_U07RHEA}}), {{NAME_U08TOMAS}} Vidal ({{EMAIL_U08TOMAS}}), {{NAME_U09EMBER}} Shah ({{EMAIL_U09EMBER}}, deactivated external sender — mail still readable in archive).",
+    "Timezone for relative time expressions: America/Los_Angeles.",
+    "Benchmark wall-clock anchor: 2026-04-19T10:00:00-07:00 (Sunday).",
+    "Gmail message ordering: messages.list and threads.list return results newest-first by internalDate; the agent must reverse to present oldest-first when asked.",
+    "System labels referenced by ID, not name: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, IMPORTANT, UNREAD, CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES, CATEGORY_FORUMS. User-defined label names are case-sensitive on the wire but Gmail tolerates case in search queries (q=label:Hintas matches label 'Hintas').",
+    "Search-query language: Gmail's q= parameter accepts operators such as from:, to:, subject:, has:attachment, is:unread, is:starred, label:, newer_than:, older_than:, after:, before:. The agent may compose these directly instead of paginating threads.list.",
+    "Single-token authoring: every seeded SENT message, draft, label, filter, and send-as alias is authored by the agent under userId='me'. Inbound threads have inbound messages authored by the listed external/internal senders.",
+    "If a required operation is unsupported by the wired-up stack (MCP missing coverage, capability not granted, or unavailable in the Gmail API), the agent must report the failure cleanly rather than fabricate results."
+  ],
+  "difficulty_rubric": {
+    "L1": "1–2 API calls, no conditional logic, no disambiguation. ≤ 30s.",
+    "L2": "3–5 calls with a simple lookup, filter, or search-query construction. ≤ 60s.",
+    "L3": "3–5 calls across multiple entities OR a simple multi-step write with one filter. ≤ 90s.",
+    "L4": "6+ calls with aggregation, conditionals, or fan-out over a set of threads / messages / labels. ≤ 3 min.",
+    "L5": "Complex orchestration: partial-failure handling, multi-axis reasoning (threads × labels × time × senders × settings), or ambiguous target resolution that must be grounded in mailbox content."
+  },
+  "feasibility_tags": {
+    "core": "Runnable with the scopes in granted_scopes on a standard Gmail mailbox.",
+    "extension": "Runnable on a standard Gmail mailbox if the operator adds the listed scope(s) from optional_scopes_for_extension_prompts. Skip in core runs.",
+    "infeasible": "Cannot be executed against a single user's Gmail mailbox regardless of scope (requires Workspace admin SDK, domain-wide delegation, or operations not exposed by the Gmail public API). Documented here for traceability."
+  },
+  "grading_notes_global": [
+    "Prompts that depend on paginated threads.list / messages.list count total tool calls separately from the success criterion; success should not be failed due to pagination count alone unless the prompt specifies an exact call count.",
+    "'Clean failure reporting' means the agent names the failing step, explains WHY (HTTP code, missing capability, scope, permission), and does not mutate downstream state silently.",
+    "Search-query equivalence: 'unread in inbox' is checked by either q='is:unread in:inbox' or labelIds=[INBOX, UNREAD]; the agent may use either equivalent form.",
+    "Date-window equivalence: 'in the last 7 days' is checked using newer_than:7d OR after:<benchmark_now-7d>; either form is accepted as long as the resolved set matches.",
+    "Address-equality is case-insensitive on the local-part and domain (RFC 5321) when comparing message From/To/Cc headers to expected addresses.",
+    "Label-ID vs label-name: when a prompt asks for results 'with the X label', the agent must resolve X via labels.list to its label_id and use labelIds= (or label:X in q=); resolving by name string only is acceptable as long as the resolved set is correct.",
+    "'Archive' means remove the INBOX label from the thread (Gmail's standard archive semantics) — not trash and not delete.",
+    "Threading: when a reply is required, the new message MUST include the In-Reply-To and References headers AND set threadId on the send request so Gmail groups it into the original thread."
+  ],
+  "prompts": [
+    {
+      "id": 1,
+      "title": "Who am I?",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "What email address is this mailbox? Also report the total number of messages and threads it contains.",
+      "success_criteria": [
+        "Returned emailAddress equals {{EMAIL_U05CLAUDE}} (workspace_state §1 'Owner' field), sourced from users.getProfile on userId='me'.",
+        "Returned messagesTotal and threadsTotal match the values reported by users.getProfile (the agent must not guess them — they must be tool-sourced)."
+      ]
+    },
+    {
+      "id": 2,
+      "title": "List all labels",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.labels"],
+      "prompt": "List every label in this mailbox — both system labels and user-defined labels. For each, report its name and type.",
+      "success_criteria": [
+        "Returned label set, restricted to type='user', equals the user-defined label names listed in workspace_state §3.1 (e.g., 'Hintas', 'Hintas/Triage', 'Hintas/Follow-up', 'Receipts', 'Press', 'Ops/Bugs'). Match by name set equality, resolved via labels.list.",
+        "Returned type='system' labels include INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, IMPORTANT, UNREAD, and at least one CATEGORY_* (workspace_state §3.0)."
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Count unread in inbox",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "How many unread threads are currently in my inbox?",
+      "success_criteria": [
+        "Returned count equals |{ t ∈ workspace_state §4 | INBOX ∈ t.labelIds AND UNREAD ∈ t.labelIds }| (the unread INBOX thread set in the seeded snapshot), resolved via threads.list with q='is:unread in:inbox' OR labelIds=[INBOX, UNREAD]."
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Latest 10 inbox subjects",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Show me the subjects of the 10 most recent threads in my inbox, newest-first. Include the sender (display name + email) of the latest message in each thread.",
+      "success_criteria": [
+        "Returned thread set equals the first 10 entries of workspace_state §4.1 (inbox threads) sorted by latest-message internalDate descending. Match by thread-id set equality against workspace_state_ids_<stack>.json thread_id_map.",
+        "Each row's Subject equals the latest-message Subject header per workspace_state §4.1 (via messages.get format=METADATA on the thread's last messageId, or threads.get and reading the last message header).",
+        "Each row's From resolves to a real header value present in the seeded message (workspace_state §4.1 'From' column)."
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Find {{NAME_U02JARED}}'s threads",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Find every thread where {{NAME_U02JARED}} is a sender or recipient. Return the subject and the date of the latest message in each.",
+      "success_criteria": [
+        "Returned thread set equals { t ∈ workspace_state §4 | ∃ m ∈ t.messages : {{EMAIL_U02JARED}} ∈ (m.From ∪ m.To ∪ m.Cc) }, resolved via threads.list with q='{{EMAIL_U02JARED}}' OR equivalent from:/to:/cc: composition.",
+        "Each row's subject and date are sourced from message headers (Subject, Date or internalDate) rather than guessed."
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Threads with attachments",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List every thread in the last 30 days that contains at least one attachment. Return subject, sender, and the attachment filenames.",
+      "success_criteria": [
+        "Returned thread set equals { t ∈ workspace_state §4 | latest_message_internalDate ≥ benchmark_now - 30d AND ∃ m ∈ t.messages : m has a part with filename and a non-empty body.attachmentId }, resolved via threads.list with q='has:attachment newer_than:30d'.",
+        "Each thread's attachment filenames match the filenames listed in workspace_state §4.2 'Attachments' column (sourced from messages.get → payload.parts[*].filename)."
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Read BUG-247 thread",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Find the thread whose subject contains 'BUG-247' and summarize every message in it: sender, date, and a 1-line summary of the body.",
+      "success_criteria": [
+        "Resolved thread equals workspace_state §4.3 label TH_BUG247 (unique subject match on 'BUG-247'), verified by thread-id equality against thread_id_map.TH_BUG247.",
+        "Returned per-message rows equal the TH_BUG247 message list in workspace_state §4.3 in chronological order. Sender and date are sourced from headers / internalDate; the 1-line summary is grounded in the seeded body text (not fabricated)."
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Starred threads",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List every thread currently marked Starred. Return the subject and sender of the latest message.",
+      "success_criteria": [
+        "Returned thread set equals { t ∈ workspace_state §4 | STARRED ∈ t.labelIds }, resolved via threads.list with q='is:starred' OR labelIds=[STARRED].",
+        "Each row's Subject and From are sourced from message headers."
+      ]
+    },
+    {
+      "id": 9,
+      "title": "List drafts",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List every draft in my mailbox. Return the recipient and subject for each.",
+      "success_criteria": [
+        "Returned draft set equals the seeded drafts in workspace_state §6 (e.g., DRAFT_OOO_REPLY, DRAFT_BUG_UPDATE), resolved via drafts.list.",
+        "Each draft's To and Subject are sourced from the draft message headers (drafts.get) and equal the workspace_state §6 'To' and 'Subject' columns."
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Create a 'Hintas/Triage' label",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.labels"],
+      "prompt": "Create a new user-defined label named 'Hintas/Triage' (nested under the existing 'Hintas' label).",
+      "success_criteria": [
+        "After the run, labels.list contains a user-type label with name exactly 'Hintas/Triage' (Gmail represents nesting via the '/' separator).",
+        "The new label did NOT exist in workspace_state §3.1 — the prompt creates it from scratch.",
+        "labelListVisibility and messageListVisibility on the new label are Gmail's defaults (labelShow / show) unless the agent was asked to specify them."
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Rename a label",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.labels"],
+      "prompt": "Rename my 'Receipts' label to 'Finance/Receipts'.",
+      "success_criteria": [
+        "After the run, labels.list contains a label with name exactly 'Finance/Receipts' and NO label named 'Receipts'.",
+        "The label_id is preserved across the rename (Gmail labels.update / labels.patch mutates name, does not re-create) — verified by label-id equality against the workspace_state §3.1 'Receipts' label-id.",
+        "Threads previously labeled 'Receipts' (workspace_state §4 entries with that label) still carry the same label_id, now displayed as 'Finance/Receipts'."
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Apply label to a thread",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Apply the 'Hintas/Follow-up' label to the BUG-247 thread.",
+      "success_criteria": [
+        "After the run, threads.get on workspace_state §4.3 TH_BUG247 returns labelIds containing the label_id of 'Hintas/Follow-up' (resolved via labels.list).",
+        "No other label was added or removed on TH_BUG247 — verified by labelIds set difference against the workspace_state baseline."
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Remove a label from threads",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Remove the 'Hintas/Follow-up' label from every thread that currently has it.",
+      "success_criteria": [
+        "After the run, threads.list with labelIds=[id_of_Hintas/Follow-up] returns the empty set.",
+        "The set of threads that previously had that label (workspace_state §4 entries with 'Hintas/Follow-up' in labelIds) retain all OTHER labels they had — verified by labelIds set difference per thread, equal to baseline minus {follow-up}."
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Archive a thread",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Archive the BUG-247 thread (remove it from the inbox without trashing it).",
+      "success_criteria": [
+        "After the run, threads.get on workspace_state §4.3 TH_BUG247 returns labelIds NOT containing INBOX.",
+        "TRASH is also NOT in labelIds (the prompt explicitly said 'without trashing it') — verifies archive vs trash semantics.",
+        "All other labels on TH_BUG247 (per workspace_state §4.3 baseline) are unchanged."
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Mark thread as read",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Mark the most recent thread from {{NAME_U04LAGOON}} as read.",
+      "success_criteria": [
+        "Resolved thread equals the latest thread (by internalDate) where {{EMAIL_U04LAGOON}} is a sender — i.e., the topmost result of q='from:{{EMAIL_U04LAGOON}}' (workspace_state §4 entry tagged TH_LAGOON_LATEST).",
+        "After the run, threads.get on that thread returns labelIds NOT containing UNREAD.",
+        "No other label was added or removed."
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Star a thread",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Star every thread from {{NAME_U01MIRANDA}} received in the last 14 days.",
+      "success_criteria": [
+        "Target thread set equals { t ∈ workspace_state §4 | ∃ m ∈ t.messages : m.From == {{EMAIL_U01MIRANDA}} AND m.internalDate ≥ benchmark_now - 14d }, resolved via q='from:{{EMAIL_U01MIRANDA}} newer_than:14d'.",
+        "After the run, every target thread has STARRED in its labelIds; no non-target thread had STARRED added."
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Trash a thread",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Move the 'Q1 OKR digest' newsletter thread to trash.",
+      "success_criteria": [
+        "Resolved thread equals workspace_state §4.4 label TH_OKR_DIGEST (subject begins with 'Q1 OKR digest').",
+        "After the run, threads.get on that thread returns labelIds containing TRASH and NOT containing INBOX (Gmail's trash semantics).",
+        "threads.list with q='in:trash' contains that thread; threads.list with q='in:inbox' does not."
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Untrash a thread",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "I trashed a thread by mistake. Restore the most recent thread currently in Trash back to my inbox.",
+      "success_criteria": [
+        "Resolved thread equals the latest-by-internalDate thread in workspace_state §4.5 'Trash' (seeded TH_OLD_PROMO).",
+        "After the run, that thread's labelIds contain INBOX and NOT TRASH.",
+        "All other trashed threads (per workspace_state §4.5) remain in Trash."
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Create a draft",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.compose"],
+      "prompt": "Create (but do not send) a draft addressed to {{EMAIL_U02JARED}} with subject 'Sprint kickoff agenda' and body 'See attached — reviewing at 10am Pacific tomorrow.'",
+      "success_criteria": [
+        "After the run, drafts.list returns a new draft authored by {{EMAIL_U05CLAUDE}} (per the agent's userId='me').",
+        "drafts.get on that draft returns headers To: {{EMAIL_U02JARED}}, Subject: 'Sprint kickoff agenda', and a text body containing the literal substring 'See attached — reviewing at 10am Pacific tomorrow.'",
+        "No new SENT message exists for this draft — the agent did NOT auto-send."
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Send a new email",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "prompt": "Send an email to {{EMAIL_U07RHEA}} with subject 'Tile loader root cause' and body 'Pushed fix in PR #12345. Closing BUG-247 once CI is green.'",
+      "success_criteria": [
+        "After the run, threads.list with q='from:me to:{{EMAIL_U07RHEA}} subject:\"Tile loader root cause\"' returns at least one new thread.",
+        "messages.get on the new SENT message returns To: {{EMAIL_U07RHEA}}, Subject: 'Tile loader root cause', body containing 'Pushed fix in PR #12345. Closing BUG-247 once CI is green.'",
+        "The message has SENT in labelIds and is NOT a draft (DRAFT not in labelIds)."
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Reply within a thread",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "prompt": "Reply to the BUG-247 thread with the body 'Acknowledged — deploying the fix this afternoon.' The reply must be threaded (not a new conversation).",
+      "success_criteria": [
+        "After the run, the new SENT message lives inside threadId == thread_id_map.TH_BUG247 — i.e., threads.get(TH_BUG247) contains one more message than the baseline, authored by {{EMAIL_U05CLAUDE}}.",
+        "The new message's headers include In-Reply-To and References pointing at the previous last message's Message-ID per workspace_state §4.3 baseline.",
+        "Subject of the reply equals 'Re: <original BUG-247 subject>' (Gmail's Re:-prefix preservation) — verified against the seeded TH_BUG247 subject."
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Forward a thread",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "prompt": "Forward the latest message in the BUG-247 thread to {{EMAIL_U06DEVON}}, with a note: 'FYI — closing soon.'",
+      "success_criteria": [
+        "After the run, a new SENT message exists with To: {{EMAIL_U06DEVON}}, Subject prefixed 'Fwd:' on the original TH_BUG247 latest-message subject.",
+        "Body contains both the literal substring 'FYI — closing soon.' AND a quoted region containing text from the forwarded message (workspace_state §4.3 latest-message body).",
+        "The forward is delivered as a new thread (Gmail forwards do not thread into the source) — messageId is in a thread different from thread_id_map.TH_BUG247."
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Send a draft",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "prompt": "Send the draft titled 'Bug triage — weekly update' (workspace_state seeds DRAFT_BUG_UPDATE) as-is, without editing.",
+      "success_criteria": [
+        "Resolved draft equals workspace_state §6 DRAFT_BUG_UPDATE (unique subject match on 'Bug triage — weekly update').",
+        "After the run, drafts.list no longer contains DRAFT_BUG_UPDATE.",
+        "A new SENT message exists with the same To, Subject, and body as DRAFT_BUG_UPDATE's baseline per workspace_state §6."
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Update a draft",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.compose"],
+      "prompt": "Edit the draft titled 'Bug triage — weekly update': append the line 'Open count this week: 3.' to the end of the body. Do not send it.",
+      "success_criteria": [
+        "drafts.get on DRAFT_BUG_UPDATE after the run returns a body ending with the literal substring 'Open count this week: 3.' (newline-tolerant).",
+        "All other draft fields (To, Cc, Subject) match the workspace_state §6 DRAFT_BUG_UPDATE baseline — the agent did NOT clobber recipients or subject.",
+        "No new SENT message exists for this draft."
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Delete a draft",
+      "difficulty": "L1",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.compose"],
+      "prompt": "Delete the draft titled 'Bug triage — weekly update' without sending it.",
+      "success_criteria": [
+        "After the run, drafts.list does not contain DRAFT_BUG_UPDATE.",
+        "No new SENT message was created for that draft (the agent did NOT send-and-call-it-deletion)."
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Triage today's unread",
+      "difficulty": "L3",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "For every unread thread in my inbox received today (in America/Los_Angeles), apply the 'Hintas/Triage' label. Do not mark them read.",
+      "success_criteria": [
+        "Target thread set equals { t ∈ workspace_state §4 | INBOX ∈ t.labelIds AND UNREAD ∈ t.labelIds AND latest_message_internalDate falls on benchmark_now's calendar day (2026-04-19, America/Los_Angeles) }.",
+        "After the run, every target thread has the 'Hintas/Triage' label_id in its labelIds.",
+        "Every target thread still has UNREAD in its labelIds — the agent did NOT silently mark them read."
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Bulk-archive promotions",
+      "difficulty": "L3",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Archive every thread currently in the Promotions category that was received more than 14 days ago.",
+      "success_criteria": [
+        "Target thread set equals { t ∈ workspace_state §4 | CATEGORY_PROMOTIONS ∈ t.labelIds AND latest_message_internalDate < benchmark_now - 14d }, resolved via q='category:promotions older_than:14d'.",
+        "After the run, every target thread has INBOX removed from labelIds.",
+        "Threads in Promotions received within the last 14 days are unchanged (still have INBOX)."
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Empty Spam",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Permanently delete every message currently sitting in Spam.",
+      "success_criteria": [
+        "Target set equals { m ∈ workspace_state §4.6 'Spam' | SPAM ∈ m.labelIds }, resolved via messages.list with q='in:spam'.",
+        "After the run, messages.list with q='in:spam' returns the empty set.",
+        "messages.get on each baseline spam message-id returns 404 / object_not_found (permanent delete — NOT moved to Trash).",
+        "Non-spam labels and threads are unchanged."
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Senders of unread inbox",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Who has unread mail waiting for me in the inbox? List each unique sender (email + display name from the From header) and the count of unread threads from that sender.",
+      "success_criteria": [
+        "Considered set equals the unread-inbox thread set (q='is:unread in:inbox'), then per-thread sender = From header of the latest message.",
+        "Returned sender list, as a multiset { (email, count) }, equals the aggregation in workspace_state §4.7 'Unread-by-sender' table.",
+        "Display names are sourced from the From header's display part, not invented."
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Threads with no reply from me",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Find every thread received in the last 30 days where the most recent message is from someone else (not me), and I have never replied in that thread.",
+      "success_criteria": [
+        "Returned thread set equals { t ∈ workspace_state §4 | latest_message.internalDate ≥ benchmark_now - 30d AND latest_message.From != {{EMAIL_U05CLAUDE}} AND ∀ m ∈ t.messages : m.From != {{EMAIL_U05CLAUDE}} }, resolvable as q='-from:me newer_than:30d' followed by per-thread filtering on agent participation.",
+        "Each returned row identifies the thread by subject and latest sender, sourced from headers."
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Threads I'm CC'd on only",
+      "difficulty": "L3",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List threads where I appear only in the Cc field (never in To) of any message. Return subject + latest sender.",
+      "success_criteria": [
+        "Returned thread set equals { t ∈ workspace_state §4 | ∃ m ∈ t.messages : {{EMAIL_U05CLAUDE}} ∈ m.Cc AND ∀ m' ∈ t.messages : {{EMAIL_U05CLAUDE}} ∉ m'.To }, resolved via q='cc:me -to:me' (Gmail accepts 'me' to mean the mailbox owner).",
+        "Each returned subject and latest-sender pair is grounded in message headers."
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Read body of a specific message",
+      "difficulty": "L2",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "Fetch the FIRST message in the BUG-247 thread and return its plain-text body verbatim.",
+      "success_criteria": [
+        "Returned body equals the seeded plain-text body of TH_BUG247's first message per workspace_state §4.3 (chronological-first by internalDate).",
+        "Body is decoded from the base64url'd messages.get payload — not paraphrased or summarized."
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Download an attachment",
+      "difficulty": "L3",
+      "category": "retrieval",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "In the BUG-247 thread, the third message has a single attachment named 'repro.log'. Return its size in bytes and its first 200 characters (decoded plain text).",
+      "success_criteria": [
+        "Resolved attachmentId equals the attachment with filename 'repro.log' on TH_BUG247 message #3 per workspace_state §4.3.",
+        "Returned size in bytes equals workspace_state §4.3 'repro.log' size column (sourced from messagePartBody.size on messages.attachments.get).",
+        "Returned text equals the first 200 characters of the base64url-decoded content per workspace_state §4.3."
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Get vacation responder",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "Is the vacation responder currently enabled on my mailbox? If so, return its subject and body.",
+      "success_criteria": [
+        "Returned enableAutoReply matches workspace_state §7.1 (baseline: disabled).",
+        "If enabled in the seeded state, returned responseSubject and responseBodyPlainText (or responseBodyHtml) match workspace_state §7.1 verbatim.",
+        "Sourced from gmail.users.settings.getVacation, not guessed."
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Set vacation responder",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "Turn on the vacation responder from 2026-04-22 to 2026-04-29 (Pacific) with subject 'OOO until April 29' and body 'Out of office — will respond after April 29. For urgent items contact {{EMAIL_U02JARED}}.'",
+      "success_criteria": [
+        "gmail.users.settings.getVacation after the run returns enableAutoReply=true, responseSubject='OOO until April 29', responseBodyPlainText (or Html, after strip-tags) containing the literal substring 'Out of office — will respond after April 29. For urgent items contact {{EMAIL_U02JARED}}.'",
+        "startTime resolves to 2026-04-22T00:00:00-07:00 (±120s) and endTime resolves to 2026-04-29T23:59:59-07:00 (±120s) — Gmail stores these as epoch millis.",
+        "restrictToContacts and restrictToDomain match the baseline (false) unless the prompt asks otherwise."
+      ]
+    },
+    {
+      "id": 36,
+      "title": "List filters",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "List every filter currently configured on this mailbox. For each, return its criteria (from/subject/has-attachment) and its action (labels added, labels removed, forward target).",
+      "success_criteria": [
+        "Returned filter set equals workspace_state §7.2 (seeded filters: FILTER_RECEIPTS, FILTER_PRESS).",
+        "Each filter's criteria and action match workspace_state §7.2 (sourced from gmail.users.settings.filters.list)."
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Create a filter",
+      "difficulty": "L3",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "https://www.googleapis.com/auth/gmail.settings.basic",
+        "https://www.googleapis.com/auth/gmail.labels"
+      ],
+      "prompt": "Create a filter that auto-applies the 'Ops/Bugs' label to incoming messages whose subject contains 'BUG-' or 'Outage' AND skips the inbox.",
+      "success_criteria": [
+        "After the run, gmail.users.settings.filters.list contains a new filter whose criteria.subject matches the (case-insensitive) substring pattern 'BUG-' OR 'Outage' (Gmail uses a query string; 'subject:(BUG- OR Outage)' is acceptable).",
+        "Filter action.addLabelIds contains the label_id of 'Ops/Bugs' (resolved via labels.list).",
+        "Filter action.removeLabelIds contains INBOX (skip-the-inbox semantics)."
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Delete a filter",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "Delete the filter that auto-labels receipts (workspace_state seeds FILTER_RECEIPTS).",
+      "success_criteria": [
+        "Resolved filter id equals workspace_state §7.2 FILTER_RECEIPTS (unique match: criteria.from contains 'receipts@' OR action.addLabelIds contains 'Receipts').",
+        "After the run, gmail.users.settings.filters.list does NOT contain that filter id.",
+        "Other filters in workspace_state §7.2 remain unchanged."
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Update signature for primary send-as",
+      "difficulty": "L2",
+      "category": "write",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "Update the signature on my primary send-as alias ({{EMAIL_U05CLAUDE}}) to the HTML '<p>{{NAME_U05CLAUDE}}<br/>Hintas</p>'.",
+      "success_criteria": [
+        "After the run, gmail.users.settings.sendAs.get on sendAsEmail={{EMAIL_U05CLAUDE}} returns signature == '<p>{{NAME_U05CLAUDE}}<br/>Hintas</p>'.",
+        "isPrimary on that alias remains true (the agent did NOT flip primary)."
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Get auto-forwarding status",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "Is auto-forwarding enabled on this mailbox? If so, what address is mail forwarded to and what disposition is used (leave-in-inbox, archive, mark-read, or trash)?",
+      "success_criteria": [
+        "Returned enabled, emailAddress, and disposition equal workspace_state §7.4 (baseline: disabled).",
+        "Sourced from gmail.users.settings.getAutoForwarding."
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Get IMAP settings",
+      "difficulty": "L1",
+      "category": "retrieval",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.settings.basic"],
+      "prompt": "What is the current IMAP configuration on this mailbox? Return enabled, autoExpunge, expungeBehavior, and maxFolderSize.",
+      "success_criteria": [
+        "Returned values match workspace_state §7.5 (sourced from gmail.users.settings.getImap).",
+        "No mutation occurred — gmail.users.settings.getImap after the run still matches the baseline."
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Conflicting label modify",
+      "difficulty": "L3",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "On the BUG-247 thread, apply the 'Hintas/Triage' label AND remove the 'Hintas/Triage' label in a single modify request.",
+      "success_criteria": [
+        "Reports that the Gmail API rejects threads.modify when the same labelId appears in both addLabelIds and removeLabelIds with a 400 invalid_argument error (per workspace_state §8.1 documented edge case).",
+        "TH_BUG247 labelIds match the workspace_state §4.3 baseline — no label change was applied silently.",
+        "If the agent retries with a 'clean' request (only add, then only remove, sequenced), grade that as PASS only if the agent explicitly reports the original conflict before falling back; otherwise the prompt is testing the conflict-detection path."
+      ]
+    },
+    {
+      "id": 44,
+      "title": "Operate on a trashed thread",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "Apply the 'Hintas/Follow-up' label to the thread workspace_state seeds as TH_OLD_PROMO (currently in Trash).",
+      "success_criteria": [
+        "Resolved thread equals TH_OLD_PROMO (workspace_state §4.5 'Trash' — TRASH ∈ labelIds).",
+        "Behaviour: Gmail accepts threads.modify on trashed threads. After the run, threads.get returns labelIds containing both TRASH and the 'Hintas/Follow-up' label_id.",
+        "INBOX must NOT have been re-added — modifying a trashed thread does not auto-restore it."
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Rename a system label (reject)",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.labels"],
+      "prompt": "Rename the INBOX label to 'Mailbox'.",
+      "success_criteria": [
+        "Reports that Gmail rejects renaming the system label INBOX with a 400 — system labels are immutable per the benchmark's `unavailable_via_api.label_color_for_system_labels` field.",
+        "labels.list after the run still contains a system label with name 'INBOX' — no rename occurred.",
+        "No 'Mailbox' user-label was silently created instead."
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Search by date window",
+      "difficulty": "L2",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List every thread received between 2026-04-12 and 2026-04-18 (inclusive, America/Los_Angeles). Return subject + sender.",
+      "success_criteria": [
+        "Returned set equals { t ∈ workspace_state §4 | 2026-04-12T00:00 ≤ latest_message.internalDate ≤ 2026-04-18T23:59:59 in America/Los_Angeles }, resolvable as q='after:2026/04/12 before:2026/04/19' (Gmail's before: is exclusive).",
+        "Subjects and senders are sourced from message headers."
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Bulk relabel (label migration)",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.modify"],
+      "prompt": "I'm renaming the 'Press' label to 'External/Press'. Apply the 'External/Press' label to every thread that currently has 'Press', then remove the 'Press' label from those threads. Finally, delete the now-empty 'Press' label.",
+      "success_criteria": [
+        "Order constraint: agent (a) creates 'External/Press' via labels.create OR confirms it exists; (b) applies it to every thread with the 'Press' label_id; (c) removes 'Press' from those threads; (d) deletes the 'Press' label — verified by the tool-call sequence in the transcript. Out-of-order steps risk leaving threads with neither label.",
+        "After the run, the set of threads with 'External/Press' label_id equals the workspace_state §4.8 'Press-labeled' set.",
+        "After the run, no label named 'Press' exists in labels.list, and the deleted label_id is not referenced on any thread."
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Quiet labels audit",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "List every user-defined label that has had NO new threads (no thread whose latest message arrived after benchmark_now - 60d) applied to it. Return the label name and the date of its most recent thread.",
+      "success_criteria": [
+        "Considered universe = user-defined labels per workspace_state §3.1.",
+        "Per-label quiet flag = max(internalDate of latest message on any thread with that label_id) < benchmark_now - 60d. Computed via threads.list with labelIds=<each user-defined label> sorted by internalDate desc.",
+        "Returned label set equals the quiet-flag-positive subset per workspace_state §8.2 (seeded baseline tag QUIET_LABELS)."
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Senders with no reply from me",
+      "difficulty": "L4",
+      "category": "search",
+      "feasible_on_free_plan": "core",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "prompt": "For each sender who has emailed me in the last 30 days, count how many of their threads I have NEVER replied to. Return the top 5 senders by that count.",
+      "success_criteria": [
+        "Per-thread reply-from-me detected via ∃ m ∈ t.messages : m.From == {{EMAIL_U05CLAUDE}} (equivalently, t intersects q='from:me').",
+        "Per-sender count = |{ t ∈ 30d-window threads | latest sender = sender AND no message in t is from me }|.",
+        "Returned top-5 list matches the workspace_state §8.3 NO_REPLY_BY_SENDER aggregation (seeded ranking). Sender display names are sourced from From headers."
+      ]
+    },
+    {
+      "id": 50,
+      "title": "OOO setup, end-to-end",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "extension",
+      "required_scopes": [
+        "https://www.googleapis.com/auth/gmail.settings.basic",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.labels",
+        "https://www.googleapis.com/auth/gmail.send"
+      ],
+      "prompt": "I'm going OOO from 2026-04-22 to 2026-04-29 (Pacific). Do the following IN ORDER — do not reorder: (a) create a user label 'OOO/Apr-2026' (nested under a new top-level 'OOO' if it does not exist). (b) Turn on the vacation responder for that date range with subject 'OOO 2026-04-22 → 2026-04-29' and body 'Out of office. For urgent items, contact {{EMAIL_U02JARED}}. Otherwise I will respond after April 29.' (c) Apply 'OOO/Apr-2026' to every unread INBOX thread received in the last 7 days. (d) Send a heads-up email to {{EMAIL_U02JARED}} with subject 'Covering my inbox 04/22–04/29' and body that lists the subjects of the threads you just labeled (one per line).",
+      "success_criteria": [
+        "Step order verified via the transcript: labels.create (or labels.get for OOO/Apr-2026) MUST come before settings.updateVacation MUST come before threads.modify MUST come before messages.send. Out-of-order tool calls fail the order constraint.",
+        "labels.list contains 'OOO' AND 'OOO/Apr-2026' after the run.",
+        "settings.getVacation returns enableAutoReply=true with the prescribed subject + body and startTime/endTime within ±120s of the prescribed dates (per the date semantics in prompt 35).",
+        "Every target thread (the q='is:unread in:inbox newer_than:7d' set per workspace_state §4) has 'OOO/Apr-2026' label_id in its labelIds.",
+        "A new SENT message exists to {{EMAIL_U02JARED}} with the prescribed subject and a body containing one line per labeled-thread subject (set-equality with the target-thread subject list)."
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Triage and reply to a single thread",
+      "difficulty": "L5",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.send"
+      ],
+      "prompt": "For the BUG-247 thread: (1) summarize the thread in 2–4 sentences covering the repro, root cause, and current status; (2) post a reply (threaded) with the exact body 'Closing — fix shipped in PR #12345.'; (3) remove the 'Hintas/Follow-up' label if present and add 'Resolved' (create the 'Resolved' label first if it does not exist); (4) archive the thread.",
+      "success_criteria": [
+        "Resolved thread equals workspace_state §4.3 TH_BUG247.",
+        "Summary content reflects the seeded TH_BUG247 message bodies (repro, root cause, status) — grounded in messages.get returns, not fabricated.",
+        "After the run, threads.get(TH_BUG247) contains a new message authored by {{EMAIL_U05CLAUDE}} with body exactly 'Closing — fix shipped in PR #12345.' and proper In-Reply-To / References headers.",
+        "labels.list contains 'Resolved' (newly created if absent in workspace_state §3.1).",
+        "TH_BUG247 final labelIds: contain 'Resolved' label_id, do NOT contain 'Hintas/Follow-up' label_id, do NOT contain INBOX (archived)."
+      ]
+    },
+    {
+      "id": 52,
+      "title": "Send-and-label round trip",
+      "difficulty": "L4",
+      "category": "orchestration",
+      "feasible_on_free_plan": "core",
+      "required_scopes": [
+        "https://www.googleapis.com/auth/gmail.send",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ],
+      "prompt": "Send a new email to {{EMAIL_U07RHEA}} and {{EMAIL_U06DEVON}} with subject 'Weekly bug review — prep' and body 'Sharing the running bug list for Friday. Please add anything missing by Thursday EOD.' Then apply the 'Ops/Bugs' label to the resulting SENT thread.",
+      "success_criteria": [
+        "After the run, a new SENT message exists with To: containing both {{EMAIL_U07RHEA}} and {{EMAIL_U06DEVON}}, Subject 'Weekly bug review — prep', and body containing the prescribed text.",
+        "The new thread (threadId of the SENT message) has 'Ops/Bugs' label_id in its labelIds (resolved via labels.list).",
+        "No other label or modification was made on unrelated threads."
+      ]
+    },
+    {
+      "id": 53,
+      "title": "[INFEASIBLE] Read another user's mailbox",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "List the latest 10 threads in {{NAME_U02JARED}}'s ({{EMAIL_U02JARED}}) inbox.",
+      "success_criteria": [
+        "Reports that reading another user's mailbox requires Google Workspace domain-wide delegation with a service-account credential and the gmail.users.* path scoped to that userId — not available under the standard OAuth user-token configuration in granted_scopes.",
+        "Does NOT call threads.list with userId={{EMAIL_U02JARED}} and silently treat the result as Jared's mailbox — with the agent's own user token, that call either returns the AGENT's threads (Gmail ignores userId outside delegation) or errors. Either way the agent must NOT present the results as Jared's mail.",
+        "No fabricated thread list is returned."
+      ]
+    },
+    {
+      "id": 54,
+      "title": "[INFEASIBLE] Provision a Gmail account",
+      "difficulty": "L1",
+      "category": "edge_case",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "Create a new Gmail account for 'quinn@hintas.co' so the team can start using it.",
+      "success_criteria": [
+        "Reports that creating Gmail accounts is not exposed by the Gmail API — it requires the Admin SDK Directory API with a Workspace-admin OAuth flow, per the benchmark's `unavailable_via_api.workspace_admin_operations` field.",
+        "Does NOT fabricate a successful provisioning — the agent's own mailbox state (workspace_state §1..§7) is unchanged.",
+        "Does NOT substitute creating a send-as alias for 'quinn@hintas.co' — that is a different operation and was not requested."
+      ]
+    },
+    {
+      "id": 55,
+      "title": "[INFEASIBLE] Generate an S/MIME certificate",
+      "difficulty": "L2",
+      "category": "edge_case",
+      "feasible_on_free_plan": "infeasible",
+      "required_scopes": [],
+      "prompt": "Generate a new S/MIME signing certificate for my primary send-as alias and set it as default.",
+      "success_criteria": [
+        "Reports that S/MIME certificate generation is not exposed by the Gmail API — only insert / list / delete / setDefault on an already-issued S/MIME config (gmail.users.settings.sendAs.smimeInfo), per the benchmark's `unavailable_via_api.smime_certificate_generation` field.",
+        "Does NOT fabricate a successful generation — gmail.users.settings.sendAs.smimeInfo.list on the primary alias matches the workspace_state §7.6 baseline (no new entries)."
+      ]
+    }
+  ],
+  "prompt_summary": {
+    "total_entries": 54,
+    "core_count": 42,
+    "extension_count": 9,
+    "infeasible_count": 3,
+    "core_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 43, 44, 45, 46, 47, 48, 49, 51, 52],
+    "extension_ids": [34, 35, 36, 37, 38, 40, 41, 42, 50],
+    "infeasible_ids": [53, 54, 55],
+    "difficulty_distribution_core": {
+      "L1": [1, 2, 3, 9, 10, 25],
+      "L2": [4, 5, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18, 19, 20, 23, 32, 44, 45, 46],
+      "L3": [13, 21, 22, 24, 26, 27, 28, 29, 31, 33, 43, 51],
+      "L4": [30, 47, 48, 49, 52],
+      "L5": []
+    },
+    "difficulty_distribution_extension": {
+      "L1": [34, 36, 41, 42],
+      "L2": [35, 38, 40],
+      "L3": [37],
+      "L5": [50]
+    }
+  }
+}

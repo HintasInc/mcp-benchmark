@@ -1,0 +1,4 @@
+{
+  "email_address": "<the gmail mailbox address>",
+  "history_id": "<users.getProfile.historyId, optional>"
+}
