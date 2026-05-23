@@ -35,7 +35,7 @@ Each platform was run head-to-head over a fixed prompt suite (48 prompts for Sla
 | Speed          |               16.9 s |             44.2 s |              +27.2 s  |
 | Tokens         |                4,132 |             11,684 |               +7,552  |
 
-Full report: [experiments/slack/results.md](experiments/slack/results.md)
+Full report: [experiments/slack/README.md](experiments/slack/README.md)
 
 ### Notion
 
@@ -45,7 +45,7 @@ Full report: [experiments/slack/results.md](experiments/slack/results.md)
 | Speed          |                45.4 s |              48.2 s |               +2.8 s  |
 | Tokens         |                78,172 |              74,411 |               −3,761  |
 
-Full report: [experiments/notion/results.md](experiments/notion/results.md)
+Full report: [experiments/notion/README.md](experiments/notion/README.md)
 
 ### Gmail
 
@@ -55,7 +55,7 @@ Full report: [experiments/notion/results.md](experiments/notion/results.md)
 | Speed          |               29.5 s |             56.9 s |              +27.4 s  |
 | Tokens         |               15,267 |             39,335 |              +24,068  |
 
-Full report: [experiments/gmail/results.md](experiments/gmail/results.md)
+Full report: [experiments/gmail/README.md](experiments/gmail/README.md)
 
 ## What gets measured
 
