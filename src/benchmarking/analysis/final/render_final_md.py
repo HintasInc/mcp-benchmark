@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 VERDICT_GLYPH = {"PASS": "✓", "PARTIAL": "◐", "FAIL": "✗", "ERROR": "⚠"}
@@ -115,11 +116,20 @@ def _analysis_md_link(run_dir: Path | None, output_dir: Path) -> str | None:
     if not md_path.exists():
         return None
     try:
-        rel = md_path.resolve().relative_to(output_dir.resolve())
-        target = str(rel)
+        target = os.path.relpath(md_path.resolve(), output_dir.resolve())
     except ValueError:
         target = str(md_path.resolve())
     return f"[`{md_path.name}`]({target})"
+
+
+def _rel_dir(run_dir: Path | None, output_dir: Path) -> str:
+    """Render a run dir relative to output_dir so committed reports carry no absolute paths."""
+    if run_dir is None:
+        return ""
+    try:
+        return os.path.relpath(run_dir.resolve(), output_dir.resolve())
+    except ValueError:
+        return str(run_dir)
 
 
 def render_run_links(L, b_dir, v_dir, b_label, v_label, output_dir):
@@ -129,8 +139,8 @@ def render_run_links(L, b_dir, v_dir, b_label, v_label, output_dir):
         return
     L.append("## Per-run reports")
     L.append("")
-    L.append(f"- {b_label}: {b_link or '_(missing analysis.md)_'}  ↳ `{b_dir}`")
-    L.append(f"- {v_label}: {v_link or '_(missing analysis.md)_'}  ↳ `{v_dir}`")
+    L.append(f"- {b_label}: {b_link or '_(missing analysis.md)_'}  ↳ `{_rel_dir(b_dir, output_dir)}`")
+    L.append(f"- {v_label}: {v_link or '_(missing analysis.md)_'}  ↳ `{_rel_dir(v_dir, output_dir)}`")
     L.append("")
 
 
