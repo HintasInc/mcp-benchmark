@@ -277,11 +277,21 @@ def spawn_claude(prompt: str, platform: Platform, timeout: int) -> int:
         sys.exit("ERROR: `claude` CLI not found on PATH")
 
 
+MECHANICAL_FIELDS = (
+    "tool_calls", "tools_invoked",
+    "initial_context", "peak_context", "total_tokens", "wall_clock_s",
+)
+
+
 def aggregate_analysis_json(run_dir: Path, stack: Stack) -> Path:
     """Combine every per_prompt_analysis/p<id>.json into a single analysis.json.
 
-    Pulls title/difficulty/category from analysis_data.json so the file remains
-    well-formed even if the agent omitted them in a per-prompt file.
+    Pulls title/difficulty/category and the mechanical metrics (tool_calls,
+    tools_invoked, initial_context, peak_context, total_tokens, wall_clock_s)
+    from analysis_data.json. The LLM grader is instructed to copy these
+    verbatim from the precompute, but its outputs aren't trustworthy enough
+    to use directly — we always overwrite from analysis_data.json so the
+    deterministic precompute wins.
     """
     src = run_dir / "analysis_data.json"
     src_data = json.loads(src.read_text()) if src.exists() else {"per_prompt": {}}
@@ -298,11 +308,16 @@ def aggregate_analysis_json(run_dir: Path, stack: Stack) -> Path:
             continue
         pid = row.get("id") or f.stem.lstrip("p")
         meta = src_pp.get(pid, {})
+        side = dict(row.get(stack.name, {}))
+        precomputed = meta.get(stack.name, {}) or {}
+        for field in MECHANICAL_FIELDS:
+            if field in precomputed:
+                side[field] = precomputed[field]
         per_prompt[pid] = {
             "title":      row.get("title")      or meta.get("title", ""),
             "difficulty": row.get("difficulty") or meta.get("difficulty", ""),
             "category":   row.get("category")   or meta.get("category", ""),
-            stack.name:   row.get(stack.name, {}),
+            stack.name:   side,
         }
 
     out = {

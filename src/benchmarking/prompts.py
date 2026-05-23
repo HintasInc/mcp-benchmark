@@ -157,4 +157,22 @@ def load_prompts(prompts_file: str | Path) -> list[dict]:
     with open(path) as f:
         data = json.load(f)
     subs = build_substitutions(load_user_map(path))
-    return [substitute(p, subs) for p in data["prompts"]]
+    global_assumptions = substitute(data.get("global_assumptions", []), subs)
+    context_preamble = _render_context_preamble(global_assumptions)
+    prompts = []
+    for p in data["prompts"]:
+        sub_p = substitute(p, subs)
+        sub_p["_context_preamble"] = context_preamble
+        prompts.append(sub_p)
+    return prompts
+
+
+def _render_context_preamble(global_assumptions: list[str] | dict | None) -> str:
+    if not global_assumptions:
+        return ""
+    if isinstance(global_assumptions, dict):
+        lines = [str(v) for v in global_assumptions.values()]
+    else:
+        lines = [str(x) for x in global_assumptions]
+    body = "\n".join(f"- {line}" for line in lines if line)
+    return f"Context (global assumptions for this benchmark run):\n{body}\n\nTask:\n"

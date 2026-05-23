@@ -348,7 +348,7 @@ def run_session(prompt: dict, stack: Stack, platform: Platform,
     Returns a metrics dict.
     """
     display = stack.display_name
-    prompt_text = prompt["prompt"]
+    prompt_text = prompt.get("_context_preamble", "") + prompt["prompt"]
     pid = prompt["id"]
     start = time.monotonic()
 
