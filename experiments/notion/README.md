@@ -4,8 +4,8 @@ This benchmark ran the Notion MCP - Official head-to-head against the Notion MCP
 
 ## Measured against
 
-- **Notion MCP - Official** (baseline): `[20260429_205418__notion](runs/20260429_205418__notion/analysis.md)`
-- **Notion MCP - Hintas** (variant): `[20260429_205444__hintas__topk10_batch-off_max10_rag-off](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
+- **Notion MCP - Official** (baseline): [`20260429_205418__notion`](runs/20260429_205418__notion/analysis.md)
+- **Notion MCP - Hintas** (variant): [`20260429_205444__hintas__topk10_batch-off_max10_rag-off`](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)
 
 ## Verdict legend
 

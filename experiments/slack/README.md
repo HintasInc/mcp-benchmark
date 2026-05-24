@@ -4,8 +4,8 @@ This benchmark ran the Slack MCP - Official head-to-head against the Slack MCP -
 
 ## Measured against
 
-- **Slack MCP - Official** (baseline): `[20260429_205001__slack](runs/20260429_205001__slack/analysis.md)`
-- **Slack MCP - Hintas** (variant): `[20260430_100018__hintas__topk10_batch-off_max10_rag-off](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
+- **Slack MCP - Official** (baseline): [`20260429_205001__slack`](runs/20260429_205001__slack/analysis.md)
+- **Slack MCP - Hintas** (variant): [`20260430_100018__hintas__topk10_batch-off_max10_rag-off`](runs/20260430_100018__hintas__topk10_batch-off_max10_rag-off/analysis.md)
 
 ## Verdict legend
 
