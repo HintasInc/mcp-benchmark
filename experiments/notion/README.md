@@ -4,10 +4,10 @@ This benchmark ran the Notion MCP - Official baseline against three variants —
 
 ## Measured against
 
-- **Notion MCP - Official** (baseline): `[20260429_205418__notion](runs/20260429_205418__notion/analysis.md)`
-- **Notion MCP - Hintas** (variant): `[20260429_205444__hintas__topk10_batch-off_max10_rag-off](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)`
-- **Notion MCP - Executor** (variant): `[20260608_214637__executor](runs/20260608_214637__executor/analysis.md)`
-- **Notion MCP - Composio** (variant): `[20260616_093236__composio](runs/20260616_093236__composio/analysis.md)`
+- **Notion MCP - Official** (baseline): [`20260429_205418__notion`](runs/20260429_205418__notion/analysis.md)
+- **Notion MCP - Hintas** (variant): [`20260429_205444__hintas__topk10_batch-off_max10_rag-off`](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)
+- **Notion MCP - Executor** (variant): [`20260608_214637__executor`](runs/20260608_214637__executor/analysis.md)
+- **Notion MCP - Composio** (variant): [`20260616_093236__composio`](runs/20260616_093236__composio/analysis.md)
 
 ## Verdict legend
 
