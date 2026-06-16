@@ -1,11 +1,13 @@
 # Notion benchmark
 
-This benchmark ran the Notion MCP - Official head-to-head against the Notion MCP - Hintas across 56 prompts. Both stacks answered the same prompts against two mirrored Notion workspaces (same users, pages, databases, rows, and shared/unshared boundaries), so the deltas reflect the MCP under test rather than workspace skew. Each session is locked to a single MCP with built-in tools disabled, so the agent has to succeed or fail on the server alone.
+This benchmark ran the Notion MCP - Official baseline against three variants — Notion MCP - Hintas, Notion MCP - Executor, and Notion MCP - Composio — across 56 prompts. Every stack answered the same prompts against mirrored Notion workspaces (same users, pages, databases, rows, and shared/unshared boundaries), so the deltas reflect the MCP under test rather than workspace skew. Each session is locked to a single MCP with built-in tools disabled, so the agent has to succeed or fail on the server alone.
 
 ## Measured against
 
 - **Notion MCP - Official** (baseline): [`20260429_205418__notion`](runs/20260429_205418__notion/analysis.md)
 - **Notion MCP - Hintas** (variant): [`20260429_205444__hintas__topk10_batch-off_max10_rag-off`](runs/20260429_205444__hintas__topk10_batch-off_max10_rag-off/analysis.md)
+- **Notion MCP - Executor** (variant): [`20260608_214637__executor`](runs/20260608_214637__executor/analysis.md)
+- **Notion MCP - Composio** (variant): [`20260616_093236__composio`](runs/20260616_093236__composio/analysis.md)
 
 ## Verdict legend
 
@@ -17,43 +19,40 @@ This benchmark ran the Notion MCP - Official head-to-head against the Notion MCP
 ## Verdict tallies
 
 
-| Metric       | Notion's official MCP | Hintas's Notion MCP |
-| ------------ | --------------------- | ------------------- |
-| PASS         | 38                    | 45                  |
-| PARTIAL      | 4                     | 0                   |
-| FAIL         | 14                    | 8                   |
-| ERROR        | 0                     | 3                   |
-| Success rate | 68%                   | 80%                 |
+| Metric       | Notion MCP - Official | Notion MCP - Executor | Notion MCP - Composio | Notion MCP - Hintas |
+| ------------ | --------------------- | --------------------- | --------------------- | ------------------- |
+| PASS         | 38                    | 40                    | 44                    | **45**              |
+| PARTIAL      | 4                     | 3                     | 2                     | **0**               |
+| FAIL         | 14                    | 13                    | 10                    | **8**               |
+| ERROR        | 0                     | 0                     | 0                     | 3                   |
+| Success rate | 68%                   | 71%                   | 79%                   | **80%**             |
 
 
 ## Tool-call tallies
 
 
-| Metric         | Notion's official MCP | Hintas's Notion MCP |
-| -------------- | --------------------- | ------------------- |
-| Tools complete | 399                   | 295                 |
-| Tools failed   | 12                    | 0                   |
-| Tools partial  | 0                     | 0                   |
-| Total          | 411                   | 295                 |
-| Tool pass rate | 97%                   | 100%                |
+| Metric         | Notion MCP - Official | Notion MCP - Executor | Notion MCP - Composio | Notion MCP - Hintas |
+| -------------- | --------------------- | --------------------- | --------------------- | ------------------- |
+| Tools complete | 399                   | 552                   | 255                   | 295                 |
+| Tools failed   | 12                    | 10                    | 2                     | **0**               |
+| Tools partial  | 0                     | 0                     | 0                     | 0                   |
+| Total          | 411                   | 562                   | 257                   | 295                 |
+| Tool pass rate | 97%                   | 98%                   | 99%                   | **100%**            |
 
 
 ## Global comparable metrics
 
-> For each variant, this restricts to prompts where **both** the baseline and that variant passed. That's the fair apples-to-apples subset for token and speed comparisons.
+> This restricts to prompts where **every** stack passed. That's the fair apples-to-apples subset for token and speed comparisons.
 
-- Comparable prompt IDs: `1, 2, 4, 5, 6, 8, 9, 10, 13, 14, 15, 16, 17, 18, 20, 22, 23, 24, 25, 27, 32, 33, 34, 36, 37, 41, 42, 44, 45, 47, 49, 50, 53, 55, 58` (count: 35)
-- Excluded count: 21
+- Prompts: 30
 
 
-| Metric                 | Notion MCP - Official | Notion MCP - Hintas | Δ Hintas - Official |
-| ---------------------- | --------------------- | ------------------- | ------------------- |
-| Total tokens           | 78,172                | 74,411              | -3,761              |
-| Avg tokens / prompt    | 2,233                 | 2,126               | -107                |
-| Avg tokens / tool call | 267                   | 400                 | +133                |
-| Avg wall-clock (s)     | 45.4                  | 48.2                | +2.8                |
-| Success rate           | 68%                   | 80%                 | +12.5 pp            |
-| Tool pass rate         | 97%                   | 100%                | +2.9 pp             |
+| Metric                 | Notion MCP - Official | Notion MCP - Executor | Notion MCP - Composio | Notion MCP - Hintas |
+| ---------------------- | --------------------- | --------------------- | --------------------- | ------------------- |
+| Total tokens           | 63,387                | 60,137                | **39,249**            | 58,550              |
+| Avg tokens / prompt    | 2,113                 | 2,005                 | **1,308**             | 1,952               |
+| Avg tokens / tool call | 244                   | **205**               | 302                   | 412                 |
+| Avg wall-clock (s)     | 44.6                  | 47.6                  | **38.1**              | 44.4                |
 
 
 ## Folder layout

@@ -25,9 +25,9 @@ For each platform, the same prompts run under identical conditions, once against
 
 ## Experiments and Results
 
-Each platform was run head-to-head over a fixed prompt suite (48 prompts for Slack, 58 for Notion, 42 for Gmail), with the platform's official MCP and the MCP built for them by Hintas answering the same prompts against mirrored workspaces. The tables below summarize the per-dimension verdicts, and full per-prompt breakdowns live in each platform's report.
+Every stack answers the same prompts against mirrored workspaces. Full per-prompt breakdowns live in each platform's report.
 
-### Slack
+### Slack — 48 prompts
 
 | Metric         | Slack MCP - Official | Slack MCP - Hintas | Δ (Hintas − Official) |
 | :------------- | -------------------: | -----------------: | --------------------: |
@@ -37,17 +37,17 @@ Each platform was run head-to-head over a fixed prompt suite (48 prompts for Sla
 
 Full report: [experiments/slack/README.md](experiments/slack/README.md)
 
-### Notion
+### Notion — 56 prompts
 
-| Metric         | Notion MCP - Official | Notion MCP - Hintas | Δ (Hintas − Official) |
-| :------------- | --------------------: | ------------------: | --------------------: |
-| Success rate   |                   68% |                 80% |             +12.5 pp  |
-| Speed          |                45.4 s |              48.2 s |               +2.8 s  |
-| Tokens         |                78,172 |              74,411 |               −3,761  |
+| Metric         | Notion MCP - Official | Notion MCP - Executor | Notion MCP - Composio | Notion MCP - Hintas |
+| :------------- | --------------------: | --------------------: | --------------------: | ------------------: |
+| Success rate   |                   68% |                   71% |                   79% |            **80%**  |
+| Speed          |                44.6 s |                47.6 s |          **38.1 s**   |              44.4 s |
+| Tokens         |                63,387 |                60,137 |          **39,249**   |              58,550 |
 
 Full report: [experiments/notion/README.md](experiments/notion/README.md)
 
-### Gmail
+### Gmail — 42 prompts
 
 | Metric         | Gmail MCP - Official | Gmail MCP - Hintas | Δ (Hintas − Official) |
 | :------------- | -------------------: | -----------------: | --------------------: |

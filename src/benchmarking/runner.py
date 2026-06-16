@@ -316,16 +316,64 @@ def parse_token_trace(content: str) -> list[dict]:
 # Claude invocation (per-session, using alias)
 # ─────────────────────────────────────────────────────────────
 
+def resolve_mcp_config(stack: Stack) -> str:
+    """Return a single-server `--mcp-config` JSON string for the stack's MCP server.
+
+    Read from the stack's own config dir so the server's transport/auth match how
+    it is registered. Used with `--strict-mcp-config` so the session sees only this
+    server — config dirs may carry unrelated account-synced connectors that would
+    otherwise leak into the run and contaminate the comparison.
+    """
+    config_path = os.path.join(os.path.expanduser(stack.config_dir), ".claude.json")
+    with open(config_path, encoding="utf-8") as f:
+        config = json.load(f)
+
+    candidates = [config.get("mcpServers") or {}]
+    candidates += [p.get("mcpServers") or {} for p in (config.get("projects") or {}).values()]
+    for servers in candidates:
+        if stack.mcp_server in servers:
+            return json.dumps({"mcpServers": {stack.mcp_server: servers[stack.mcp_server]}})
+
+    raise RuntimeError(
+        f"MCP server '{stack.mcp_server}' not found in {config_path}; "
+        f"register it (e.g. `claude mcp add`) before benchmarking stack '{stack.name}'."
+    )
+
+
+# Built-in tools denied for `keep_builtin_tools` stacks so the MCP-only
+# guarantee still holds. The session runs with the benchmark repo as its cwd and
+# the downstream token in its env, so absent these denials the agent could:
+#   - reach the platform API directly (Bash/WebFetch/WebSearch);
+#   - spawn a helper agent/skill that does (Task/Workflow/Skill);
+#   - read the seed scripts and state files — which hold the ground-truth IDs
+#     and expected values — to shortcut retrieval (Read/Edit/Write/NotebookEdit/
+#     Glob/Grep).
+# The remaining built-ins (plan/worktree/cron/todo/monitor/etc.) can't touch the
+# platform or read local files, and are kept available so the slow MCP server
+# wins the tool-registration race at session start.
+_BYPASS_CAPABLE_TOOLS = [
+    "Bash", "WebFetch", "WebSearch",
+    "Task", "Workflow", "Skill",
+    "Read", "Edit", "Write", "NotebookEdit", "Glob", "Grep",
+]
+
+
 def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
     """Build the claude CLI invocation. Config dir routing is handled via env.
 
-    The session is locked to the stack's MCP server: built-in tools are disabled
-    (`--tools ""`) and the allowlist admits only `mcp__<server>__*`, so the agent
-    cannot shell out, read/write files, or fetch the web to work around a missing
-    MCP capability — it must succeed or fail using the MCP under test.
+    The session is locked to the stack's MCP server: the allowlist admits only
+    `mcp__<server>__*`, and `--strict-mcp-config` restricts the session to the
+    single server resolved from the stack's config dir. The agent cannot reach
+    any other connector to work around a missing MCP capability — it must succeed
+    or fail using the MCP under test.
+
+    Built-in tools are disabled with `--tools ""` by default. For
+    `keep_builtin_tools` stacks (e.g. Composio, whose remote server only
+    registers its tools when built-in tools are present) they are kept available
+    but the bypass-capable ones are denied, preserving the MCP-only guarantee.
     """
     mcp_allowlist = f"mcp__{stack.mcp_server}__*"
-    return [
+    cmd = [
         "claude",
         "--print",
         "--verbose",
@@ -333,11 +381,19 @@ def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
         "--dangerously-skip-permissions",
         "--model", "sonnet",
         "--effort", "high",
-        "--tools", "",
+    ]
+    if stack.keep_builtin_tools:
+        cmd += ["--disallowedTools", *_BYPASS_CAPABLE_TOOLS]
+    else:
+        cmd += ["--tools", ""]
+    cmd += [
+        "--strict-mcp-config",
+        "--mcp-config", resolve_mcp_config(stack),
         "--allowedTools", mcp_allowlist,
         "--",
         prompt_text,
     ]
+    return cmd
 
 def run_session(prompt: dict, stack: Stack, platform: Platform,
                 session_dir: Path, timeout: int, dry_run: bool,
