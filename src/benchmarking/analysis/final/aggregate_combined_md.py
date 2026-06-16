@@ -727,9 +727,13 @@ def assign_short_labels(runs: list[dict], platform: Platform) -> None:
         differing_keys[stack_name] = differing
 
     seen: dict[str, int] = {}
-    baseline_stack_name = platform.baseline_stack.name
+    prefix = f"{platform.display_name} MCP - "
     for r in runs:
-        provider = "Official" if r["stack_name"] == baseline_stack_name else "Hintas"
+        # Derive the short provider from the stack's own display_name (e.g.
+        # "Notion MCP - Composio" → "Composio") rather than assuming every
+        # non-baseline run is Hintas — N-way comparisons carry several variants.
+        disp = platform.stack(r["stack_name"]).display_name
+        provider = disp[len(prefix):] if disp.startswith(prefix) else disp
         if stack_count[r["stack_name"]] > 1:
             params = r["hintas_params"] or {}
             keys = differing_keys.get(r["stack_name"], [])

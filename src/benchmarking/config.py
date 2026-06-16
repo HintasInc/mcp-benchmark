@@ -45,6 +45,12 @@ class Stack:
     config_dir: str
     token_env: str
     mcp_server: str
+    # Some remote MCP servers (e.g. Composio) only finish registering their
+    # tools when the session starts with built-in tools present; under the
+    # default `--tools ""` lock the first turn fires before their handshake
+    # completes and no MCP tools load. When True, keep built-in tools available
+    # but deny the ones that could bypass the MCP under test (see runner.py).
+    keep_builtin_tools: bool = False
 
 
 @dataclass(frozen=True)
@@ -134,6 +140,7 @@ def load_platform_from_path(toml_path: Path) -> Platform:
             config_dir=_resolve(s["config_dir_env"], s["config_dir_default"]),
             token_env=s["token_env"],
             mcp_server=s["mcp_server"],
+            keep_builtin_tools=s.get("keep_builtin_tools", False),
         )
         for s in stacks_data
     )

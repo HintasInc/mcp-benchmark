@@ -26,7 +26,9 @@ state_file_template  = "scripts/workspace_state_ids_{stack}.json"
 # (P08_LEADS_ONLY, P11_LEADS_NOTES, DB_PRESS_CONTACTS, U09EMBER).
 prereq_file_template = "scripts/prerequisites_{stack}.local.json"
 
-# stacks[0] is the baseline; stacks[1] is the variant under evaluation.
+# stacks[0] is the baseline (official MCP); stacks[1] is the primary variant
+# (Hintas). Pairwise report deltas (`final`/`aggregate`) are computed as
+# baseline − stacks[1]. Additional variants are compared via `combine` (N-way).
 [[stacks]]
 name               = "notion"
 display_name       = "Notion MCP - Official"
@@ -42,6 +44,37 @@ config_dir_env     = "NOTION_HINTAS_CONFIG_DIR"
 config_dir_default = "~/.claude-notion-hintas"
 token_env          = "HINTAS_TOKEN"
 mcp_server         = "hintas-notion"
+
+# Executor gateway (rhyssullivan/executor) wrapping the official Notion API.
+# Shares the baseline workspace and NOTION_TOKEN, so it must not run
+# concurrently with the `notion` stack. Compared 3-way via `combine`.
+[[stacks]]
+name               = "executor"
+display_name       = "Notion MCP - Executor"
+config_dir_env     = "NOTION_EXECUTOR_CONFIG_DIR"
+config_dir_default = "~/.claude-notion-executor"
+token_env          = "NOTION_TOKEN"
+mcp_server         = "executor"
+
+# Composio gateway wrapping the official Notion API. Shares the baseline
+# workspace and NOTION_TOKEN, so it must not run concurrently with the
+# `notion` stack. Compared N-way via `combine`.
+#
+# keep_builtin_tools: Composio's remote MCP server only registers its tools
+# when the session starts with built-in tools present; under the default
+# `--tools ""` lock the first turn fires before its handshake completes and no
+# MCP tools load (sessions then hallucinate and false-pass). The runner keeps
+# built-in tools available but denies the ones that could reach Notion outside
+# the MCP (Bash/WebFetch/WebSearch/Task/Workflow/Skill). Token/tool-call counts
+# are therefore not strictly comparable to the `--tools ""` stacks.
+[[stacks]]
+name               = "composio"
+display_name       = "Notion MCP - Composio"
+config_dir_env     = "NOTION_COMPOSIO_CONFIG_DIR"
+config_dir_default = "~/.claude-notion-composio"
+token_env          = "NOTION_TOKEN"
+mcp_server         = "composio-notion"
+keep_builtin_tools = true
 
 [analysis]
 display_name       = "Analyzer Claude"
