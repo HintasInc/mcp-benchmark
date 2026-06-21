@@ -1,0 +1,114 @@
+
+============================================================
+  Hintas Multi-API Benchmark — Notion Seeder
+  Mode: LIVE SEED
+  benchmark_now: 2026-04-19T10:00:00-07:00
+============================================================
+
+============================================================
+  0. Verifying auth
+============================================================
+  Authenticated as bot: Hintas Agent (3504da5e-14d2-8112-9147-00272fa7a5c0)
+  Workspace: 'Hintas-side'
+
+============================================================
+  1. Resolving users
+============================================================
+  [config] Loaded persona cast from users.local.json
+  [OK ] U06DEVON → 350d872b-594c-810f-b21c-00027a22909e  (prtmasapkota+devon@gmail.com)
+  [OK ] U03PINKMAN → 350d872b-594c-8124-9705-0002a3adf281  (prtmasapkota+pinkman@gmail.com)
+  [OK ] U01MIRANDA → 350d872b-594c-8158-8245-00023e08f098  (prtmasapkota+miranda@gmail.com)
+  [OK ] U02JARED → 350d872b-594c-81a1-acb5-0002171deb0c  (prtmasapkota+jared@gmail.com)
+  [OK ] U05CLAUDE → 350d872b-594c-81b5-b816-000262babcc1  (prtmasapkota+claude@gmail.com)
+  [OK ] U08TOMAS → 350d872b-594c-81d5-8789-00027f2592e9  (prtmasapkota+tomas@gmail.com)
+  [OK ] U07RHEA → 350d872b-594c-81da-abdd-0002e396e0cf  (prtmasapkota+rhea@gmail.com)
+  [OK ] U04LAGOON → 350d872b-594c-81db-b9b2-00027a56194e  (prtmasapkota+lagoon@gmail.com)
+  [OK ] U10AGENT → 3504da5e-14d2-8112-9147-00272fa7a5c0  (this integration's bot user)
+  [WARN] Expected member U09EMBER (prtmasapkota+ember@gmail.com) not found in /users — people props referencing it will be created with no assignee.
+
+============================================================
+  2. Locating the root page
+============================================================
+  [OK ] P_ROOT → 3504da5e-14d2-803f-ab1f-cc5fca84b210
+
+============================================================
+  3. Creating databases
+============================================================
+  [OK ] Created DB_PEOPLE ('People') → 3854da5e-14d2-8196-9e57-f019d1e3607b
+  [OK ] Created DB_PROJECTS ('Projects') → 3854da5e-14d2-818b-816a-fea8d9c7cd89
+  [OK ] Created DB_ONBOARDING ('Onboarding') → 3854da5e-14d2-819a-80db-c6f02a9fd055
+
+============================================================
+  3b. Configuring Status property options
+============================================================
+  [OK ] DB_PEOPLE.Status options → ['Active', 'Inactive']
+  [OK ] DB_PROJECTS.Status options → ['Not started', 'In progress', 'In review', 'Done']
+  [OK ] DB_ONBOARDING.Status options → ['Draft', 'In progress', 'Done']
+
+============================================================
+  4a. Seeding DB_PEOPLE rows
+============================================================
+  [OK ] Created PEOPLE_U01MIRANDA ('Miranda Okonkwo') → 3854da5e-14d2-81ce-9f45-fc5b65b5953a
+  [OK ] Created PEOPLE_U02JARED ('Jared Blackwood') → 3854da5e-14d2-811e-8b2a-e5594c1cc1c4
+  [OK ] Created PEOPLE_U03PINKMAN ('Saul Rivera') → 3854da5e-14d2-8111-9c5e-d2649b0240ed
+  [OK ] Created PEOPLE_U04LAGOON ('Lagoon Takahashi') → 3854da5e-14d2-81e5-95cb-e06724940295
+  [OK ] Created PEOPLE_U06DEVON ('Devon Park') → 3854da5e-14d2-81ee-af12-dc0cd44bf409
+  [OK ] Created PEOPLE_U07RHEA ('Rhea Kapoor') → 3854da5e-14d2-8190-bf41-cb5d794ca09c
+  [OK ] Created PEOPLE_U08TOMAS ('Tomás Vidal') → 3854da5e-14d2-81b8-9146-d2af9f4bab15
+  [OK ] Created PEOPLE_U09EMBER ('Ember Shah') → 3854da5e-14d2-81cd-b40d-eaefd0892715
+
+============================================================
+  4b. Seeding DB_PROJECTS rows
+============================================================
+  [OK ] Created PROJ_PRICING ('Pricing page') → 3854da5e-14d2-81bc-be37-de9603b20a46
+  [OK ] Created TASK_JARED1 ('Refactor auth module') → 3854da5e-14d2-814f-ba94-d3ec7518e219
+  [OK ] Created TASK_JARED2 ('Write onboarding guide') → 3854da5e-14d2-81b6-97f8-f2deb71138ef
+  [OK ] Created TASK_LAGOON1 ('Migrate analytics events') → 3854da5e-14d2-8165-ad53-cc0c5dcc5405
+  [OK ] Created TASK_PINK_DONE ('Q1 retro notes') → 3854da5e-14d2-8142-8aac-f97023a5e550
+  [OK ] Created TASK_DEVON1 ('Fix export pipeline timeout') → 3854da5e-14d2-8186-9db6-c09c7c784be5
+
+============================================================
+  4c. Seeding DB_ONBOARDING rows
+============================================================
+  [OK ] Created ONB_PRIYA ('Priya Nakamura') → 3854da5e-14d2-8124-95d8-c23cce5f8998
+
+============================================================
+  5. Creating pages + block trees
+============================================================
+  [OK ] Created PG_RELEASE_NOTES ('Release Notes') → 3854da5e-14d2-8107-8d38-d3af7887911c
+  [OK ]   captured 3/3 block ids for PG_RELEASE_NOTES
+  [OK ] Created PG_ALLHANDS ('All-Hands') → 3854da5e-14d2-81a9-a718-d56767d72bdb
+  [OK ]   captured 4/4 block ids for PG_ALLHANDS
+  [OK ] Created PG_WEEKLY ('Weekly Notes') → 3854da5e-14d2-8111-b77f-c0e2abaf2e48
+  [OK ]   captured 2/2 block ids for PG_WEEKLY
+  [OK ] Created PG_Q2_ROADMAP ('Q2 Roadmap') → 3854da5e-14d2-81c6-a7fb-d00e043d890b
+  [OK ]   captured 8/8 block ids for PG_Q2_ROADMAP
+  [OK ] Created PG_INCIDENTS ('Incidents') → 3854da5e-14d2-81f6-ae79-f33594251c14
+  [OK ]   captured 2/2 block ids for PG_INCIDENTS
+  [OK ] Created PG_LEAD_JARED ('Jared Blackwood') → 3854da5e-14d2-815f-9e90-f3c39f1ef6f1
+  [OK ]   captured 2/2 block ids for PG_LEAD_JARED
+  [OK ] Created PG_LEAD_PINKMAN ('Saul Rivera') → 3854da5e-14d2-8146-a1a5-cdcdacf34ea2
+  [OK ]   captured 2/2 block ids for PG_LEAD_PINKMAN
+  [OK ] Created PG_LEAD_LAGOON ('Lagoon Takahashi') → 3854da5e-14d2-8110-bfde-ed564f765ee1
+  [OK ]   captured 2/2 block ids for PG_LEAD_LAGOON
+
+============================================================
+  7. Saving workspace state
+============================================================
+
+============================================================
+  6. Capturing workspace ground truth
+============================================================
+  [OK ] Captured 13 users
+  [OK ] Captured 3 databases
+  [OK ] Captured 15 rows
+  [OK ] Captured 9 pages
+  [OK ] Captured block ids for 8 pages
+  Saved → /Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/workspace_state_notion_hintas.json
+  reset_notion.py reads state['ground_truth'] as the answer key.
+
+============================================================
+  SEED COMPLETE
+  State written for reset_notion.py to consume.
+============================================================
+

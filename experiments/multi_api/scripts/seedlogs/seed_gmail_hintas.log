@@ -1,0 +1,53 @@
+/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/api_core/_python_version_support.py:273: FutureWarning: You are using a Python version (3.10.18) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2026-10-04). Please upgrade to the latest Python version, or at least Python 3.11, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+
+============================================================
+  Multi-API Benchmark — Gmail Surface Seeder
+  Mode:  LIVE SEED
+  benchmark_now: 2026-04-19T10:00:00-07:00
+============================================================
+  [config] Loaded persona cast from users.local.json
+
+============================================================
+  0. Resolving mailbox owner
+============================================================
+  Authenticated as: pratimasapkotaa@gmail.com
+  Mailbox totals: 40 messages, 32 threads, historyId=20485
+  [WARN] owner mailbox 'pratimasapkotaa@gmail.com' != agent persona 'prtmasapkota+claude@gmail.com' — proceeding anyway (standalone seeder)
+
+============================================================
+  1a. Wiping prior seed threads
+============================================================
+  [OK ] No prior seed threads present
+
+============================================================
+  1b. Wiping all drafts
+============================================================
+  [OK ] Deleted 2 draft(s)
+
+============================================================
+  2. Importing seeded threads
+============================================================
+  [OK ] TH_EXPORT msg 1: id=19da565b6e37e748 thread=19da565b6e37e748
+  [OK ] TH_SSO msg 1: id=19da03f5ae92f577 thread=19da03f5ae92f577
+  [OK ] TH_PARTNERSHIP msg 1: id=19d973c3a77c8477 thread=19d973c3a77c8477
+  [OK ] TH_PARTNERSHIP msg 2: id=19d9bf4b8815a5dd thread=19d973c3a77c8477
+  [OK ] TH_PARTNERSHIP msg 3: id=19da11b156945ac4 thread=19d973c3a77c8477
+  [OK ] TH_PRIYA msg 1: id=19d9e1a0bbe2d5c3 thread=19d9e1a0bbe2d5c3
+  [OK ] TH_TRIAGE1 msg 1: id=19da264acf568fd8 thread=19da264acf568fd8
+  [OK ] TH_TRIAGE2 msg 1: id=19da489fdbf08f3e thread=19da489fdbf08f3e
+  [OK ] TH_TRIAGE3 msg 1: id=19da59ca6fe339f8 thread=19da59ca6fe339f8
+
+============================================================
+  3. Capturing ground truth
+============================================================
+  [OK ] Captured 21 labels
+  [OK ] Captured 7 threads / 9 messages
+  Saved → /Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/workspace_state_gmail_hintas.json
+
+============================================================
+  SEED COMPLETE
+  This is a manual / seed-only step. Run reset_gmail.py before each
+  prompt run to restore the mailbox to this snapshot.
+============================================================
+

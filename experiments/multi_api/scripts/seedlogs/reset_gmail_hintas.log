@@ -1,0 +1,57 @@
+/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/api_core/_python_version_support.py:273: FutureWarning: You are using a Python version (3.10.18) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2026-10-04). Please upgrade to the latest Python version, or at least Python 3.11, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+
+============================================================
+  Multi-API Benchmark — Gmail Surface Reset
+  Mode:  LIVE RESET
+============================================================
+  Loaded state ← /Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/workspace_state_gmail_hintas.json
+  [config] Loaded persona cast from users.local.json
+
+============================================================
+  1. Deleting extra user labels
+============================================================
+  [OK ] deleted extra label 'Hintas'
+  [OK ] deleted extra label 'Hintas/Triage'
+  [OK ] deleted extra label 'Hintas/Follow-up'
+  [OK ] deleted extra label 'Finance/Receipts'
+  [OK ] deleted extra label 'Press'
+  [OK ] deleted extra label 'Ops/Bugs'
+  [OK ] deleted extra label 'Receipts'
+
+============================================================
+  2. Restoring per-message label state
+============================================================
+  [OK ] TH_EXPORT_m1 clean
+  [OK ] TH_SSO_m1 clean
+  [OK ] TH_PARTNERSHIP_m1 clean
+  [OK ] TH_PARTNERSHIP_m2 clean
+  [OK ] TH_PARTNERSHIP_m3 clean
+  [OK ] TH_PRIYA_m1 clean
+  [OK ] TH_TRIAGE1_m1 clean
+  [OK ] TH_TRIAGE2_m1 clean
+  [OK ] TH_TRIAGE3_m1 clean
+
+============================================================
+  3. Deleting all drafts
+============================================================
+
+============================================================
+  4. Trashing non-seed SENT messages
+============================================================
+  [OK ] trashed 3 non-seed SENT message(s)
+
+============================================================
+  5. Deleting non-seed filters
+============================================================
+
+============================================================
+  6. Disabling vacation responder
+============================================================
+  [OK ] vacation responder disabled
+
+============================================================
+  RESET COMPLETE
+  Manual / per-prompt step — run before each prompt run.
+============================================================
+

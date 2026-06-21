@@ -1,0 +1,41 @@
+/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/api_core/_python_version_support.py:273: FutureWarning: You are using a Python version (3.10.18) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2026-10-04). Please upgrade to the latest Python version, or at least Python 3.11, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+
+============================================================
+  Multi-API Benchmark — Gmail Surface Seeder
+  Mode:  LIVE SEED
+  benchmark_now: 2026-04-19T10:00:00-07:00
+============================================================
+  [config] Loaded persona cast from users.json
+
+============================================================
+  0. Resolving mailbox owner
+============================================================
+Traceback (most recent call last):
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/seed_gmail.py", line 698, in <module>
+    sys.exit(main())
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/seed_gmail.py", line 661, in main
+    profile = verify_owner()
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/seed_gmail.py", line 345, in verify_owner
+    profile = svc.users().getProfile(userId="me").execute()
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/googleapiclient/_helpers.py", line 130, in positional_wrapper
+    return wrapped(*args, **kwargs)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/googleapiclient/http.py", line 923, in execute
+    resp, content = _retry_request(
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/googleapiclient/http.py", line 191, in _retry_request
+    resp, content = http.request(uri, method, *args, **kwargs)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google_auth_httplib2.py", line 205, in request
+    self.credentials.before_request(self._request, method, uri, request_headers)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/auth/credentials.py", line 469, in before_request
+    self._blocking_refresh(request)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/auth/credentials.py", line 203, in _blocking_refresh
+    self.refresh(request)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/auth/credentials.py", line 482, in refresh
+    self._perform_refresh_token(request)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/oauth2/credentials.py", line 435, in _perform_refresh_token
+    ) = reauth.refresh_grant(
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/oauth2/reauth.py", line 370, in refresh_grant
+    _client._handle_error_response(response_data, retryable_error)
+  File "/Users/pratima/Documents/Projects/hintas-project/benchmarking/.venv/lib/python3.10/site-packages/google/oauth2/_client.py", line 73, in _handle_error_response
+    raise exceptions.RefreshError(
+google.auth.exceptions.RefreshError: ('invalid_grant: Bad Request', {'error': 'invalid_grant', 'error_description': 'Bad Request'})

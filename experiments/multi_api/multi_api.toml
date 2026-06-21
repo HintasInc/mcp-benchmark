@@ -1,0 +1,59 @@
+# Multi-API platform manifest.
+#
+# This suite measures the capability that distinguishes the Hintas deployment:
+# serving Slack, Gmail, and Notion from one MCP server so a single prompt can be
+# satisfied end-to-end across surfaces. It compares one unified Hintas server
+# against a baseline that stitches together the three official single-API MCP
+# servers in one session.
+
+name         = "multi_api"
+display_name = "Multi-API"
+
+# No single downstream_token_env: there is no one workspace token. Each surface
+# reads its own stack-prefixed credentials (BASELINE_SLACK_TOKEN,
+# HINTAS_NOTION_TOKEN, …) straight from experiments/multi_api/.env, which
+# scripts/common.py auto-loads on import.
+
+[paths]
+# All paths are resolved relative to this manifest's directory
+# (experiments/multi_api/).
+prompts_file = "prompts/benchmark_prompts.json"
+output_dir   = "runs"
+# No reset_script / seed_script / verify_script: the single-API benchmark flow
+# drives one script per stack, but multi_api seeds and resets each surface with
+# its own standalone script — scripts/seed_slack.py / seed_gmail.py /
+# seed_notion.py and the matching reset_*.py — invoked directly with
+# --stack {baseline,hintas}.
+#
+# No state_file_template either: multi_api keeps a separate state file per
+# (api, stack) — scripts/workspace_state_<api>_<stack>.json — managed directly
+# by scripts/common.py, not via the manifest template.
+
+# stacks[0] is the baseline; stacks[1] is the variant under evaluation.
+# Report deltas are computed as baseline − hintas.
+#
+# The baseline stitches the three official single-API servers into one session
+# via the plural `mcp_servers`; the hintas stack serves all three from one
+# unified server via the singular `mcp_server`.
+[[stacks]]
+name               = "baseline"
+display_name       = "Multi-API MCP - Baseline (Official)"
+config_dir_env     = "MULTI_API_BASELINE_CONFIG_DIR"
+config_dir_default = "~/.claude-multi-api-baseline"
+token_env          = "BASELINE_SLACK_TOKEN"
+mcp_servers        = ["slack", "gmail", "notion"]
+
+[[stacks]]
+name               = "hintas"
+display_name       = "Multi-API MCP - Hintas"
+config_dir_env     = "MULTI_API_HINTAS_CONFIG_DIR"
+config_dir_default = "~/.claude-multi-api-hintas"
+token_env          = "HINTAS_SLACK_TOKEN"
+mcp_server         = "hintas-multi-api"
+
+[analysis]
+display_name       = "Analyzer Claude"
+config_dir_env     = "ANALYSIS_CONFIG_DIR"
+config_dir_default = "~/.claude-analyzer"
+prompt_template    = "per_run/analysis_prompt.md"
+model              = "claude-sonnet-4-6"

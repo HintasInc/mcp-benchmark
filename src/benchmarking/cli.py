@@ -73,9 +73,9 @@ def add_run_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--dry-run",      action="store_true")
     p.add_argument("--skip-setup",   action="store_true",
                    help="Skip reset+seed phases (workspace is already in baseline state)")
-    p.add_argument("--reset-script",  default=str(platform.reset_script),
+    p.add_argument("--reset-script",  default=str(platform.reset_script) if platform.reset_script else None,
                    help="Per-prompt reset script (default: platform manifest)")
-    p.add_argument("--verify-script", default=str(platform.verify_script),
+    p.add_argument("--verify-script", default=str(platform.verify_script) if platform.verify_script else None,
                    help="Post-reset verification script (default: platform manifest)")
     p.add_argument("--skip-reset",    action="store_true",
                    help="Skip the per-prompt workspace reset between sessions")

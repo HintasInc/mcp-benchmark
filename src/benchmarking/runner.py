@@ -64,8 +64,8 @@ def parse_args() -> tuple[argparse.Namespace, Platform]:
                    choices=platform.stack_names,
                    help="Which stack from the platform manifest to benchmark")
     p.add_argument("--prompts-file",      default=str(platform.prompts_file))
-    p.add_argument("--reset-script",      default=str(platform.reset_script))
-    p.add_argument("--verify-script",     default=str(platform.verify_script))
+    p.add_argument("--reset-script",      default=str(platform.reset_script) if platform.reset_script else None)
+    p.add_argument("--verify-script",     default=str(platform.verify_script) if platform.verify_script else None)
     p.add_argument("--output-dir",        default=str(platform.output_dir),
                    help="Where run directories are written (default: experiments/<platform>/runs)")
     p.add_argument("--difficulty",        nargs="+",  help="e.g. L1 L2")
@@ -317,12 +317,14 @@ def parse_token_trace(content: str) -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 
 def resolve_mcp_config(stack: Stack) -> str:
-    """Return a single-server `--mcp-config` JSON string for the stack's MCP server.
+    """Return a `--mcp-config` JSON string for the stack's MCP server(s).
 
-    Read from the stack's own config dir so the server's transport/auth match how
-    it is registered. Used with `--strict-mcp-config` so the session sees only this
-    server — config dirs may carry unrelated account-synced connectors that would
-    otherwise leak into the run and contaminate the comparison.
+    Read from the stack's own config dir so each server's transport/auth match how
+    it is registered. Used with `--strict-mcp-config` so the session sees only these
+    servers — config dirs may carry unrelated account-synced connectors that would
+    otherwise leak into the run and contaminate the comparison. A multi-API stack
+    declares several servers (e.g. official Slack + Gmail + Notion), all of which
+    are merged into one config so a single prompt can reach every surface.
     """
     config_path = os.path.join(os.path.expanduser(stack.config_dir), ".claude.json")
     with open(config_path, encoding="utf-8") as f:
@@ -330,14 +332,24 @@ def resolve_mcp_config(stack: Stack) -> str:
 
     candidates = [config.get("mcpServers") or {}]
     candidates += [p.get("mcpServers") or {} for p in (config.get("projects") or {}).values()]
-    for servers in candidates:
-        if stack.mcp_server in servers:
-            return json.dumps({"mcpServers": {stack.mcp_server: servers[stack.mcp_server]}})
 
-    raise RuntimeError(
-        f"MCP server '{stack.mcp_server}' not found in {config_path}; "
-        f"register it (e.g. `claude mcp add`) before benchmarking stack '{stack.name}'."
-    )
+    resolved: dict[str, dict] = {}
+    missing: list[str] = []
+    for name in stack.mcp_servers:
+        for servers in candidates:
+            if name in servers:
+                resolved[name] = servers[name]
+                break
+        else:
+            missing.append(name)
+
+    if missing:
+        raise RuntimeError(
+            f"MCP server(s) {missing} not found in {config_path}; "
+            f"register them (e.g. `claude mcp add`) before benchmarking stack '{stack.name}'."
+        )
+
+    return json.dumps({"mcpServers": resolved})
 
 
 # Built-in tools denied for `keep_builtin_tools` stacks so the MCP-only
@@ -361,18 +373,19 @@ _BYPASS_CAPABLE_TOOLS = [
 def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
     """Build the claude CLI invocation. Config dir routing is handled via env.
 
-    The session is locked to the stack's MCP server: the allowlist admits only
-    `mcp__<server>__*`, and `--strict-mcp-config` restricts the session to the
-    single server resolved from the stack's config dir. The agent cannot reach
-    any other connector to work around a missing MCP capability — it must succeed
-    or fail using the MCP under test.
+    The session is locked to the stack's MCP server(s): the allowlist admits only
+    `mcp__<server>__*` for each declared server, and `--strict-mcp-config` restricts
+    the session to exactly the servers resolved from the stack's config dir. The
+    agent cannot reach any other connector to work around a missing MCP capability —
+    it must succeed or fail using the MCP(s) under test. A multi-API stack declares
+    several servers so one prompt can span every surface.
 
     Built-in tools are disabled with `--tools ""` by default. For
     `keep_builtin_tools` stacks (e.g. Composio, whose remote server only
     registers its tools when built-in tools are present) they are kept available
     but the bypass-capable ones are denied, preserving the MCP-only guarantee.
     """
-    mcp_allowlist = f"mcp__{stack.mcp_server}__*"
+    mcp_allowlist = ",".join(f"mcp__{name}__*" for name in stack.mcp_servers)
     cmd = [
         "claude",
         "--print",

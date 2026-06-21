@@ -1,0 +1,42 @@
+
+============================================================
+  Multi-API Benchmark — Slack Reset
+  Mode: LIVE RESET
+============================================================
+  [config] Loaded persona cast from users.json
+  Loaded state ← /Users/pratima/Documents/Projects/hintas-project/benchmarking/experiments/multi_api/scripts/workspace_state_slack_baseline.json
+
+============================================================
+  1. Resetting channel memberships
+============================================================
+  [WARN] #general invite failed: conversations.invite failed: user_not_found — {'ok': False, 'error': 'user_not_found', 'errors': [{'user': 'U09EMBER', 'ok': False, 'error': 'user_not_found'}, {'user': 'U06DEVON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U08TOMAS', 'ok': False, 'error': 'user_not_found'}, {'user': 'U02JARED', 'ok': False, 'error': 'user_not_found'}, {'user': 'U03PINKMAN', 'ok': False, 'error': 'user_not_found'}, {'user': 'U01MIRANDA', 'ok': False, 'error': 'user_not_found'}, {'user': 'U04LAGOON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U07RHEA', 'ok': False, 'error': 'user_not_found'}]}
+  [WARN] #announcements invite failed: conversations.invite failed: user_not_found — {'ok': False, 'error': 'user_not_found', 'errors': [{'user': 'U09EMBER', 'ok': False, 'error': 'user_not_found'}, {'user': 'U06DEVON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U08TOMAS', 'ok': False, 'error': 'user_not_found'}, {'user': 'U02JARED', 'ok': False, 'error': 'user_not_found'}, {'user': 'U03PINKMAN', 'ok': False, 'error': 'user_not_found'}, {'user': 'U01MIRANDA', 'ok': False, 'error': 'user_not_found'}, {'user': 'U04LAGOON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U07RHEA', 'ok': False, 'error': 'user_not_found'}]}
+  [WARN] #support invite failed: conversations.invite failed: user_not_found — {'ok': False, 'error': 'user_not_found', 'errors': [{'user': 'U09EMBER', 'ok': False, 'error': 'user_not_found'}, {'user': 'U06DEVON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U08TOMAS', 'ok': False, 'error': 'user_not_found'}, {'user': 'U02JARED', 'ok': False, 'error': 'user_not_found'}, {'user': 'U03PINKMAN', 'ok': False, 'error': 'user_not_found'}, {'user': 'U01MIRANDA', 'ok': False, 'error': 'user_not_found'}, {'user': 'U04LAGOON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U07RHEA', 'ok': False, 'error': 'user_not_found'}]}
+  [WARN] #incidents invite failed: conversations.invite failed: user_not_found — {'ok': False, 'error': 'user_not_found', 'errors': [{'user': 'U09EMBER', 'ok': False, 'error': 'user_not_found'}, {'user': 'U06DEVON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U08TOMAS', 'ok': False, 'error': 'user_not_found'}, {'user': 'U02JARED', 'ok': False, 'error': 'user_not_found'}, {'user': 'U03PINKMAN', 'ok': False, 'error': 'user_not_found'}, {'user': 'U01MIRANDA', 'ok': False, 'error': 'user_not_found'}, {'user': 'U04LAGOON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U07RHEA', 'ok': False, 'error': 'user_not_found'}]}
+  [WARN] #leads invite failed: conversations.invite failed: user_not_found — {'ok': False, 'error': 'user_not_found', 'errors': [{'user': 'U04LAGOON', 'ok': False, 'error': 'user_not_found'}, {'user': 'U03PINKMAN', 'ok': False, 'error': 'user_not_found'}, {'user': 'U02JARED', 'ok': False, 'error': 'user_not_found'}]}
+
+============================================================
+  2. Removing agent's prompt-created messages
+============================================================
+
+============================================================
+  3. Resetting reactions
+============================================================
+  [WARN] reactions.list failed: GET reactions.list failed: missing_scope — {'ok': False, 'error': 'missing_scope', 'needed': 'reactions:read', 'provided': 'identify,channels:history,groups:history,im:history,mpim:history,channels:read,files:read,canvases:read,groups:read,im:read,mpim:read,search:read,users:read,users:read.email,channels:write,chat:write,files:write,canvases:write,groups:write,im:write,mpim:write,reactions:write,reminders:write'}
+
+============================================================
+  4. Archive sweep — non-seed channels
+============================================================
+  [OK ] #all-hintas-bench1 matches ignore pattern — skipping
+  [OK ] No non-seed channels found — workspace clean ✓
+
+============================================================
+  5. Resetting scheduled messages
+============================================================
+
+============================================================
+  RESET COMPLETE
+  ⚠️  Manual/seed-only items:
+     - Seeded message ts values (posted at real wall-clock time)
+============================================================
+

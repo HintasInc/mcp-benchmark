@@ -44,13 +44,22 @@ class Stack:
     display_name: str
     config_dir: str
     token_env: str
-    mcp_server: str
+    # One or more MCP servers the session is locked to. A single-API stack
+    # declares one (`mcp_server = "x"`); a multi-API baseline that stitches
+    # several official servers declares many (`mcp_servers = ["a", "b", "c"]`).
+    # Both manifest forms normalize into this tuple at load time.
+    mcp_servers: tuple[str, ...]
     # Some remote MCP servers (e.g. Composio) only finish registering their
     # tools when the session starts with built-in tools present; under the
     # default `--tools ""` lock the first turn fires before their handshake
     # completes and no MCP tools load. When True, keep built-in tools available
     # but deny the ones that could bypass the MCP under test (see runner.py).
     keep_builtin_tools: bool = False
+
+    @property
+    def mcp_server(self) -> str:
+        """The primary (first) MCP server — for logging and single-server use."""
+        return self.mcp_servers[0]
 
 
 @dataclass(frozen=True)
@@ -65,15 +74,19 @@ class AnalysisConfig:
 class Platform:
     name: str
     display_name: str
-    downstream_token_env: str
     root: Path
     prompts_file: Path
-    reset_script: Path
-    seed_script: Path
-    verify_script: Path
     output_dir: Path
     stacks: tuple[Stack, ...]
     analysis: AnalysisConfig
+    # Optional: only the single-API benchmark flow (the runner reset/verify and
+    # the cli setup phases) consumes these. A multi-API platform drives its own
+    # standalone per-surface scripts and reads stack-prefixed surface tokens
+    # directly, so it omits them.
+    downstream_token_env: str | None = None
+    reset_script: Path | None = None
+    seed_script: Path | None = None
+    verify_script: Path | None = None
     state_file_template: str | None = None
     prereq_file_template: str | None = None
 
@@ -118,6 +131,34 @@ def _resolve(env_var: str, default: str) -> str:
     return os.environ.get(env_var, default)
 
 
+def _normalize_mcp_servers(s: dict) -> tuple[str, ...]:
+    """Normalize a stack's `mcp_server` / `mcp_servers` manifest keys into a tuple.
+
+    A stack declares either the singular `mcp_server = "x"` (single-API stacks)
+    or the plural `mcp_servers = ["a", "b"]` (a multi-API baseline that stitches
+    several official servers). Exactly one form must be present.
+    """
+    name = s.get("name", "<unnamed>")
+    has_singular = "mcp_server" in s
+    has_plural = "mcp_servers" in s
+    if has_singular and has_plural:
+        raise ValueError(
+            f"stack {name!r} declares both 'mcp_server' and 'mcp_servers'; use one"
+        )
+    if has_plural:
+        servers = s["mcp_servers"]
+        if not isinstance(servers, list) or not servers or not all(
+            isinstance(x, str) for x in servers
+        ):
+            raise ValueError(
+                f"stack {name!r} 'mcp_servers' must be a non-empty list of strings"
+            )
+        return tuple(servers)
+    if has_singular:
+        return (s["mcp_server"],)
+    raise ValueError(f"stack {name!r} must declare 'mcp_server' or 'mcp_servers'")
+
+
 def load_platform_from_path(toml_path: Path) -> Platform:
     toml_path = Path(toml_path).resolve()
     if not toml_path.exists():
@@ -139,7 +180,7 @@ def load_platform_from_path(toml_path: Path) -> Platform:
             display_name=s["display_name"],
             config_dir=_resolve(s["config_dir_env"], s["config_dir_default"]),
             token_env=s["token_env"],
-            mcp_server=s["mcp_server"],
+            mcp_servers=_normalize_mcp_servers(s),
             keep_builtin_tools=s.get("keep_builtin_tools", False),
         )
         for s in stacks_data
@@ -153,15 +194,20 @@ def load_platform_from_path(toml_path: Path) -> Platform:
     )
 
     platform_root = toml_path.parent
+
+    def _opt_script(key: str) -> Path | None:
+        rel = paths_data.get(key)
+        return platform_root / rel if rel else None
+
     return Platform(
         name=data["name"],
         display_name=data["display_name"],
-        downstream_token_env=data["downstream_token_env"],
+        downstream_token_env=data.get("downstream_token_env"),
         root=platform_root,
         prompts_file=platform_root / paths_data["prompts_file"],
-        reset_script=platform_root / paths_data["reset_script"],
-        seed_script=platform_root / paths_data["seed_script"],
-        verify_script=platform_root / paths_data["verify_script"],
+        reset_script=_opt_script("reset_script"),
+        seed_script=_opt_script("seed_script"),
+        verify_script=_opt_script("verify_script"),
         output_dir=platform_root / paths_data.get("output_dir", "runs"),
         stacks=stacks,
         analysis=analysis,
