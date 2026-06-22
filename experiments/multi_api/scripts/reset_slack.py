@@ -114,7 +114,7 @@ def api_get_paginated(method: str, params: dict, items_key: str, limit: int = 20
 def require_token(env_var: str = "SLACK_TOKEN") -> None:
     """Exit with a friendly message when the resolved token is empty."""
     if not TOKEN:
-        err(f"Set {env_var} env var or pass --token xoxp-... (agent token, claude@hintas.co)")
+        err(f"Set {env_var} env var or pass --token xoxp-... (agent token, Miranda)")
         sys.exit(1)
 
 
@@ -130,7 +130,7 @@ CHANNEL_SEED_NAMES: dict[str, str] = {
     "C_LEADS":     "leads",
 }
 
-AGENT = agent_logical_id()  # U05CLAUDE
+AGENT = agent_logical_id()  # U01MIRANDA (Miranda is the acting agent)
 
 # State loaded from workspace_state_slack.json.
 USER_ID_MAP: dict[str, str] = {}

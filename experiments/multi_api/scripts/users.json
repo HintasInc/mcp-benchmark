@@ -5,8 +5,8 @@
     "name": "Miranda Okonkwo",
     "handle": "miranda",
     "display_name": "Miranda",
-    "benchmark-author": false,
-    "team": "members"
+    "benchmark-author": true,
+    "team": "agent"
   },
   "U02JARED": {
     "id": "U02JARED",
@@ -41,8 +41,8 @@
     "name": "Claude Ellison",
     "handle": "claude",
     "display_name": "Claude",
-    "benchmark-author": true,
-    "team": "agent"
+    "benchmark-author": false,
+    "team": "members"
   },
   "U06DEVON": {
     "id": "U06DEVON",

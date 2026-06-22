@@ -7,13 +7,13 @@
   "agent_identity": {
     "mode": "single MCP server exposing Slack, Gmail, and Notion tools simultaneously",
     "slack": {
-      "acts_as_user_id": "{{ID_U05CLAUDE}}",
-      "display_name": "{{NAME_U05CLAUDE}}",
+      "acts_as_user_id": "{{ID_U01MIRANDA}}",
+      "display_name": "{{NAME_U01MIRANDA}}",
       "role": "Slack workspace owner (free plan) — no admin.* API access."
     },
     "gmail": {
-      "acts_as_email": "{{EMAIL_U05CLAUDE}}",
-      "display_name": "{{NAME_U05CLAUDE}}",
+      "acts_as_email": "{{EMAIL_U01MIRANDA}}",
+      "display_name": "{{NAME_U01MIRANDA}}",
       "role": "Mailbox owner acting on its own mailbox at userId='me' — not a Workspace admin, no domain-wide delegation."
     },
     "notion": {
@@ -100,9 +100,9 @@
       "cross_api_dependency": "Slack membership set is compared against the Notion People database; no writes.",
       "prompt": "List the members of the Slack 'leads' channel, then for each member tell me whether they have an Active row in the Notion People database. Return a table of name, Slack member (yes/no), Notion People row (Active/Missing).",
       "success_criteria": [
-        "Slack side: membership of the 'leads' channel is read via conversations.members + users.info and resolved to emails; the set equals exactly the users.json entries with team='leads' (matched by email) per §S.",
-        "Notion side: each email is looked up in the People database (§N); every team='leads' member resolves to an Active row.",
-        "The join key is the email address, not the display name; the returned table marks every lead as present on both surfaces."
+        "Slack side: membership of the 'leads' channel is read via conversations.members + users.info and resolved to emails; it includes every users.json entry with team='leads' (and may include the acting agent, who owns the channel), matched by email per §S.",
+        "Notion side: each member email is looked up in the People database (§N); every leads-channel member — leads and the acting agent alike — resolves to an Active row.",
+        "The join key is the email address, not the display name; the returned table marks every listed member as present on both surfaces."
       ]
     },
     {
@@ -112,12 +112,12 @@
       "category": "reconciliation",
       "apis": ["gmail", "slack"],
       "feasible_on_free_plan": "core",
-      "cross_api_dependency": "Gmail profile email is resolved to the corresponding Slack user.",
-      "prompt": "What email address owns this mailbox, and what is the Slack user ID and display name of the same person in the Hintas workspace?",
+      "cross_api_dependency": "Identity is read independently on each surface; the Gmail mailbox may be authenticated under a different address than the Slack account, so no email equality is assumed.",
+      "prompt": "What email address owns this Gmail mailbox, and what is the Slack user ID and display name for my account in the Hintas workspace? Report each exactly as the tools return it — the mailbox may be authenticated under a different address than my Slack login, so don't assume they match.",
       "success_criteria": [
-        "Gmail side: emailAddress is read from users.getProfile (userId='me') and equals {{EMAIL_U05CLAUDE}}.",
-        "Slack side: that email is resolved via users.lookupByEmail to {{ID_U05CLAUDE}} with display name {{NAME_U05CLAUDE}}.",
-        "Neither identifier is guessed; both are tool-sourced and the agent states the email is the join key."
+        "Gmail side: the owning address is read from users.getProfile (userId='me') and reported verbatim (tool-sourced, not guessed); it need not equal any Slack or Notion address.",
+        "Slack side: the agent's own Slack identity is resolved (auth.test then users.info) to {{ID_U01MIRANDA}} with display name {{NAME_U01MIRANDA}}.",
+        "Both identifiers are tool-sourced; the agent notes that the Gmail mailbox and the Slack account may use different email addresses (separate authentication) rather than asserting an email join."
       ]
     },
     {
@@ -146,7 +146,7 @@
       "prompt": "There is an unread email in the inbox with the subject 'Urgent: export failing in production'. Post a summary of it to the Slack 'support' channel that includes the sender's email and a one-line description, then star the original email in Gmail.",
       "success_criteria": [
         "Gmail side: the message with subject 'Urgent: export failing in production' is located (messages.list/get, §G) and after the run carries the STARRED label (users.messages.modify addLabelIds=['STARRED']).",
-        "Slack side: a message authored by {{ID_U05CLAUDE}} exists in the 'support' channel containing the real sender address read from the email's From header and a one-line summary.",
+        "Slack side: a message authored by {{ID_U01MIRANDA}} exists in the 'support' channel containing the real sender address read from the email's From header and a one-line summary.",
         "The sender address in the Slack post matches the From header of the actual email, not a placeholder."
       ]
     },
@@ -160,7 +160,7 @@
       "cross_api_dependency": "One announcement text is published to Slack, emailed to the team, and logged in Notion; the Notion log links the Slack permalink.",
       "prompt": "We are launching v4 today. Post this to the Slack 'announcements' channel: 'Hintas v4 is live — changelog in the release notes.' Email the same announcement to the team with the subject 'Hintas v4 is live'. Then append a dated bullet to the Notion 'Release Notes' page that includes a permalink to the Slack post.",
       "success_criteria": [
-        "Slack side: 'announcements' contains a message by {{ID_U05CLAUDE}} with the exact text; chat.getPermalink yields a permalink.",
+        "Slack side: 'announcements' contains a message by {{ID_U01MIRANDA}} with the exact text; chat.getPermalink yields a permalink.",
         "Gmail side: a sent message exists with subject 'Hintas v4 is live' addressed to the team distribution (all active humans except the agent) whose body contains the announcement text.",
         "Notion side: the 'Release Notes' page (§N) gains a new bullet dated today whose text embeds the actual Slack permalink returned above (not a fabricated URL).",
         "All three surfaces carry the same announcement text verbatim."
@@ -176,7 +176,7 @@
       "cross_api_dependency": "A single new-hire identity drives a Slack invite, a Notion row, and a welcome email that links the Notion onboarding page.",
       "prompt": "Onboard {{NAME_NEWHIRE}} ({{EMAIL_NEWHIRE}}). Invite her to the Slack 'general' channel and send her a Slack DM welcome. Create an 'Onboarding' page for her in Notion under the Onboarding database with status 'In progress'. Then send her a welcome email (subject 'Welcome to Hintas, {{NAME_NEWHIRE}}!') whose body links to that Notion onboarding page.",
       "success_criteria": [
-        "Slack side: {{EMAIL_NEWHIRE}} is resolved via users.lookupByEmail and the resulting user ID is a member of 'general' (conversations.invite); a DM from {{ID_U05CLAUDE}} to her exists with a welcome message.",
+        "Slack side: {{EMAIL_NEWHIRE}} is resolved via users.lookupByEmail and the resulting user ID is a member of 'general' (conversations.invite); a DM from {{ID_U01MIRANDA}} to her exists with a welcome message.",
         "Notion side: a new page exists in the Onboarding database (§N) titled for {{NAME_NEWHIRE}} with Status='In progress'; its URL is captured.",
         "Gmail side: a sent message to {{EMAIL_NEWHIRE}} with subject 'Welcome to Hintas, {{NAME_NEWHIRE}}!' whose body contains the exact Notion onboarding page URL created above.",
         "The same person is the subject on all three surfaces (matched by email), and the email link resolves to the page that was actually created."
@@ -193,7 +193,7 @@
       "prompt": "Kick off a project called 'Atlas Migration'. Create a project page in the Notion Projects database with owner {{NAME_U03PINKMAN}}. Create a public Slack channel 'atlas-migration' and set its topic to the Notion page URL. Email the leads a kickoff note (subject 'Kickoff: Atlas Migration') linking the channel and the page.",
       "success_criteria": [
         "Notion side: a page 'Atlas Migration' exists in the Projects database (§N) with Owner={{NAME_U03PINKMAN}}; its URL is captured.",
-        "Slack side: a public channel 'atlas-migration' exists (created by {{ID_U05CLAUDE}}) whose topic equals the Notion page URL captured above.",
+        "Slack side: a public channel 'atlas-migration' exists (created by {{ID_U01MIRANDA}}) whose topic equals the Notion page URL captured above.",
         "Gmail side: a sent message to the leads with subject 'Kickoff: Atlas Migration' whose body contains both the Slack channel reference and the Notion page URL.",
         "The Notion URL is identical across the channel topic and the email body."
       ]
@@ -241,7 +241,7 @@
       "prompt": "For each of the leads, find their open tasks in the Notion Projects database and send them a Slack DM listing those tasks. If a lead has no open tasks, DM them 'No open tasks — nice work.'",
       "success_criteria": [
         "Notion side: open tasks are queried per lead from the Projects database (§N), grouped by Assignee.",
-        "Slack side: each lead receives a DM from {{ID_U05CLAUDE}} (im.open + chat.postMessage) whose content matches that lead's own task list.",
+        "Slack side: each lead receives a DM from {{ID_U01MIRANDA}} (im.open + chat.postMessage) whose content matches that lead's own task list.",
         "Per-person correctness: each team='leads' member's DM contains that member's own tasks only (joined by email, never by name string); a lead with zero tasks gets the exact 'No open tasks — nice work.' message.",
         "Recipients are resolved by email join between the Notion assignee and the Slack user, not by name string alone."
       ]
@@ -258,7 +258,7 @@
       "success_criteria": [
         "Gmail side: {{NAME_U07RHEA}}'s 'Please add SSO docs' email is read (§G); a reply is sent to {{EMAIL_U07RHEA}} (In-Reply-To the original thread) confirming the task was created.",
         "Notion side: a task 'Add SSO docs' exists in the Projects database (§N) with Assignee={{NAME_U04LAGOON}}; its URL is captured.",
-        "Slack side: {{NAME_U04LAGOON}} receives a DM from {{ID_U05CLAUDE}} containing the captured Notion task URL.",
+        "Slack side: {{NAME_U04LAGOON}} receives a DM from {{ID_U01MIRANDA}} containing the captured Notion task URL.",
         "The reply, the Notion assignee, and the Slack recipient are mutually consistent (same task, correct people by email)."
       ]
     },
@@ -272,7 +272,7 @@
       "cross_api_dependency": "A Slack announcement's audience is recorded on a Notion page.",
       "prompt": "Post to the Slack 'general' channel: 'All-hands Friday 3pm — agenda in Notion.' Then on the Notion 'All-Hands' page, set the attendee list to every current member of the 'general' channel.",
       "success_criteria": [
-        "Slack side: 'general' contains a message by {{ID_U05CLAUDE}} with the exact text; the channel's current member list is read via conversations.members.",
+        "Slack side: 'general' contains a message by {{ID_U01MIRANDA}} with the exact text; the channel's current member list is read via conversations.members.",
         "Notion side: the 'All-Hands' page (§N) attendee list equals the resolved names of the 'general' members (by email join).",
         "The attendee set on Notion equals the live Slack membership, not a stale or hardcoded list."
       ]
@@ -302,7 +302,7 @@
       "cross_api_dependency": "Slack invite recipients are the email recipients; the channel ID flows into the email.",
       "prompt": "Create a private Slack channel 'leads-private', invite the leads, set the topic to 'Leads-only planning'. Then email those same leads (subject 'You've been added to leads-private') telling them they were added.",
       "success_criteria": [
-        "Slack side: a private channel 'leads-private' exists (is_private=true, creator={{ID_U05CLAUDE}}) with the leads invited and topic 'Leads-only planning'.",
+        "Slack side: a private channel 'leads-private' exists (is_private=true, creator={{ID_U01MIRANDA}}) with the leads invited and topic 'Leads-only planning'.",
         "Gmail side: a sent message to exactly the team='leads' members' emails with subject \"You've been added to leads-private\".",
         "The Slack invitee set and the email recipient set are identical, and both equal the team='leads' members (by email)."
       ]
@@ -315,10 +315,10 @@
       "apis": ["gmail", "slack"],
       "feasible_on_free_plan": "core",
       "cross_api_dependency": "Gmail label-based filtering produces a count/list that is posted to Slack.",
-      "prompt": "Apply the Gmail label 'Needs-Triage' to every unread email in the inbox from an @hintas.co sender received in the last 3 days, then post a message to the Slack 'support' channel summarizing how many were labeled and listing their subjects.",
+      "prompt": "Apply the Gmail label 'Needs-Triage' to every unread email in the inbox from a Hintas teammate (a sender whose address resolves to a member of your Slack workspace) received in the last 3 days, then post a message to the Slack 'support' channel summarizing how many were labeled and listing their subjects.",
       "success_criteria": [
-        "Gmail side: unread @hintas.co messages from the last 3 days are matched (§G) and each receives the 'Needs-Triage' label (creating the label if absent).",
-        "Slack side: 'support' contains a message by {{ID_U05CLAUDE}} stating the exact count labeled and listing each subject.",
+        "Gmail side: unread messages from the last 3 days whose sender resolves to a Slack workspace member are matched (§G) — external/customer senders are excluded — and each receives the 'Needs-Triage' label (creating the label if absent).",
+        "Slack side: 'support' contains a message by {{ID_U01MIRANDA}} stating the exact count labeled and listing each subject.",
         "The count and subjects in Slack equal the set actually labeled in Gmail (no off-by-one, no fabricated subjects)."
       ]
     },
@@ -329,10 +329,10 @@
       "category": "reconciliation",
       "apis": ["notion", "slack", "gmail"],
       "feasible_on_free_plan": "core",
-      "cross_api_dependency": "Before creating a Notion task, verify the assignee exists on Slack and Gmail.",
-      "prompt": "I want to assign a new Notion task 'Draft pricing page' to {{NAME_U08TOMAS}}. First confirm he has an active Slack account and a hintas.co mailbox; only if both check out, create the task in the Projects database assigned to him and report the task URL. If either check fails, do not create the task and tell me which check failed.",
+      "cross_api_dependency": "Before creating a Notion task, verify the assignee is reachable on Slack and has prior email correspondence in the mailbox.",
+      "prompt": "I want to assign a new Notion task 'Draft pricing page' to {{NAME_U08TOMAS}}. First confirm he has an active Slack account and that the shared mailbox has email correspondence from him; only if both check out, create the task in the Projects database assigned to him and report the task URL. If either check fails, do not create the task and tell me which check failed.",
       "success_criteria": [
-        "Verification: {{EMAIL_U08TOMAS}} resolves via Slack users.lookupByEmail to an active user, and the same address is confirmed as a valid hintas.co identity.",
+        "Verification: {{EMAIL_U08TOMAS}} resolves via Slack users.lookupByEmail to an active user, and a Gmail search (from:{{EMAIL_U08TOMAS}}) returns at least one message.",
         "Notion side: only on both checks passing, a task 'Draft pricing page' is created in the Projects database (§N) with Assignee={{NAME_U08TOMAS}}; its URL is returned.",
         "Guard behavior: the agent states both checks passed before writing; had a check failed it would report the failed check and create nothing."
       ]
@@ -347,7 +347,7 @@
       "cross_api_dependency": "A Slack reaction signals a Notion status change on the matching task.",
       "prompt": "Find the Slack message in 'general' that says 'Pricing page is ready for review.' Add a ✅ reaction to it, then set the matching 'Pricing page' task in the Notion Projects database to Status='In review'.",
       "success_criteria": [
-        "Slack side: the 'Pricing page is ready for review.' message is located (§S) and carries a reactions entry for ✅ from {{ID_U05CLAUDE}} (reactions.add).",
+        "Slack side: the 'Pricing page is ready for review.' message is located (§S) and carries a reactions entry for ✅ from {{ID_U01MIRANDA}} (reactions.add).",
         "Notion side: the 'Pricing page' task in the Projects database (§N) has Status='In review' after the run.",
         "The Slack message and the Notion task refer to the same work item (title/topic match)."
       ]
@@ -395,7 +395,7 @@
       "success_criteria": [
         "Gmail side: the 'Re: Partnership terms' thread is read in full (users.threads.get, §G).",
         "Notion side: a 'Meeting Notes' page exists summarizing the thread's decisions and action items (not boilerplate); its URL is captured.",
-        "Slack side: 'general' contains a message by {{ID_U05CLAUDE}} 'Partnership notes posted.' that includes the captured Notion URL.",
+        "Slack side: 'general' contains a message by {{ID_U01MIRANDA}} 'Partnership notes posted.' that includes the captured Notion URL.",
         "The notes reflect actual thread content, proving the Gmail→Notion hop."
       ]
     },
@@ -421,12 +421,12 @@
       "category": "reconciliation",
       "apis": ["notion", "slack", "gmail"],
       "feasible_on_free_plan": "core",
-      "cross_api_dependency": "Three-way audit joining Notion rows to Slack users and Gmail validity.",
-      "prompt": "Audit the Notion People database. For every Active row, report whether that person has a Slack account (active/missing) and whether their hintas.co address is a valid recipient. Flag any row where the person is Active in Notion but missing from Slack.",
+      "cross_api_dependency": "Three-way audit joining Notion rows to Slack users and Gmail correspondence.",
+      "prompt": "Audit the Notion People database. For every Active row, report whether that person has a Slack account (active/missing) and whether the mailbox has any email correspondence from them. Flag any row where the person is Active in Notion but missing from Slack.",
       "success_criteria": [
         "Notion side: all Active rows are read from the People database (§N).",
         "Slack side: each row's email is checked via users.lookupByEmail; presence/absence is recorded accurately.",
-        "Gmail side: each address is confirmed as an @hintas.co recipient form.",
+        "Gmail side: for each person, a from: search of the mailbox records whether any correspondence from that address exists (§G).",
         "Flagging: any Active-in-Notion-but-missing-from-Slack person is explicitly flagged; the join is by email across all three surfaces."
       ]
     },
@@ -441,7 +441,7 @@
       "prompt": "Find tasks in the Notion Projects database due within the next 7 days. For each, post a reminder in the Slack 'general' channel tagging the assignee: '<@assignee> — \"<task>\" is due <date>.'",
       "success_criteria": [
         "Notion side: tasks with a Due date within 7 days are queried from the Projects database (§N) with their assignee and due date.",
-        "Slack side: for each such task, a message by {{ID_U05CLAUDE}} in 'general' mentions the assignee's real Slack user ID (resolved by email) and states the task title and due date.",
+        "Slack side: for each such task, a message by {{ID_U01MIRANDA}} in 'general' mentions the assignee's real Slack user ID (resolved by email) and states the task title and due date.",
         "Every due-soon task gets exactly one reminder; the mention resolves to the correct Slack user."
       ]
     },

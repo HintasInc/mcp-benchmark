@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from benchmarking.config import (
-    Platform, Stack, RUN_TS_FORMAT, available_platforms,
+    Platform, Stack, Surface, RUN_TS_FORMAT, available_platforms,
     build_run_subdir, hintas_params_dict, preload_platform,
 )
 from benchmarking.prompts import load_prompts as _load_prompts_with_substitutions
@@ -143,63 +143,62 @@ def filter_prompts(prompts: list[dict], args) -> list[dict]:
 # Workspace reset
 # ─────────────────────────────────────────────────────────────
 
-def reset_workspace(reset_script: str, prompt_id, token: str, token_env: str,
-                    dry_run: bool = False, stack_name: str | None = None) -> bool:
-    """Run reset_workspace.py. Returns True on success."""
-    if dry_run:
-        safe_print(f"    [DRY] Would reset workspace for prompt {prompt_id}")
-        return True
-    cmd = [sys.executable, reset_script, "--prompt-id", str(prompt_id)]
-    if stack_name:
-        cmd.extend(["--stack", stack_name])
-    env = {**os.environ, token_env: token}
-    safe_print(f"    ↻ Resetting workspace (prompt {prompt_id})…")
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
-        if result.returncode != 0:
-            safe_print(f"    [WARN] Reset exited with code {result.returncode}")
-            safe_print(result.stderr[-500:] if result.stderr else "")
-            return False
-        return True
-    except subprocess.TimeoutExpired:
-        safe_print("    [WARN] Reset timed out after 120s")
-        return False
-    except Exception as e:
-        safe_print(f"    [WARN] Reset failed: {e}")
-        return False
+def _surface_env(surface: Surface, stack: Stack) -> dict:
+    """Subprocess env for a surface script. Injects the stack token under the
+    surface's `token_env` for single-API surfaces; multi-API surfaces resolve
+    their stack-prefixed credentials from the (already loaded) platform .env."""
+    env = {**os.environ}
+    if surface.token_env:
+        env[surface.token_env] = token_for(stack)
+    return env
 
 
-def verify_workspace(verify_script: str, stack: Stack, token: str, token_env: str,
-                     report_path: Path, dry_run: bool = False) -> dict:
-    """
-    Run verify_workspace.py against a workspace.
+def reset_surfaces(surfaces: tuple[Surface, ...], prompt_id, stack: Stack,
+                   dry_run: bool = False) -> bool:
+    """Reset every surface for a stack. Returns True only if all succeed."""
+    ok = True
+    for surface in surfaces:
+        if dry_run:
+            safe_print(f"    [DRY] Would reset {surface.name} for prompt {prompt_id}")
+            continue
+        cmd = [sys.executable, str(surface.reset_script),
+               "--prompt-id", str(prompt_id), "--stack", stack.name]
+        safe_print(f"    ↻ Resetting {surface.name} (prompt {prompt_id})…")
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120,
+                                    env=_surface_env(surface, stack))
+            if result.returncode != 0:
+                safe_print(f"    [WARN] Reset {surface.name} exited with code {result.returncode}")
+                safe_print(result.stderr[-500:] if result.stderr else "")
+                ok = False
+        except subprocess.TimeoutExpired:
+            safe_print(f"    [WARN] Reset {surface.name} timed out after 120s")
+            ok = False
+        except Exception as e:
+            safe_print(f"    [WARN] Reset {surface.name} failed: {e}")
+            ok = False
+    return ok
 
-    Returns {"ok": bool, "hard": int, "soft": int, "report_path": str, "error": str|None}.
-    "ok" is True iff verify exited 0 (no hard drift). On structural failure (exit 2),
-    "ok" is False and "error" carries the reason.
-    """
+
+def _verify_one(surface: Surface, stack: Stack, report_path: Path) -> dict:
+    """Run one surface's verify script. Returns {ok, hard, soft, report_path, error}."""
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    display = stack.display_name
-
-    if dry_run:
-        safe_print(f"    [DRY] Would verify {display} workspace")
-        return {"ok": True, "hard": 0, "soft": 0, "report_path": str(report_path), "error": None}
-
-    cmd = [sys.executable, verify_script, "--soft", "--report", str(report_path),
-           "--stack", stack.name]
-    env = {**os.environ, token_env: token}
+    cmd = [sys.executable, str(surface.verify_script), "--soft",
+           "--report", str(report_path), "--stack", stack.name]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180,
+                                env=_surface_env(surface, stack))
     except subprocess.TimeoutExpired:
         return {"ok": False, "hard": 0, "soft": 0, "report_path": str(report_path),
-                "error": "verify timed out after 180s"}
+                "error": f"{surface.name} verify timed out after 180s"}
     except Exception as e:
         return {"ok": False, "hard": 0, "soft": 0, "report_path": str(report_path),
-                "error": f"verify failed: {e}"}
+                "error": f"{surface.name} verify failed: {e}"}
 
     if result.returncode == 2:
         return {"ok": False, "hard": 0, "soft": 0, "report_path": str(report_path),
-                "error": f"verify exited 2 (structural): {result.stderr[-300:] or result.stdout[-300:]}"}
+                "error": f"{surface.name} verify exited 2 (structural): "
+                         f"{result.stderr[-300:] or result.stdout[-300:]}"}
 
     hard = soft = 0
     if report_path.exists():
@@ -210,10 +209,70 @@ def verify_workspace(verify_script: str, stack: Stack, token: str, token_env: st
             soft = data.get("soft_count", 0)
         except Exception as e:
             return {"ok": False, "hard": 0, "soft": 0, "report_path": str(report_path),
-                    "error": f"could not parse report: {e}"}
+                    "error": f"{surface.name} could not parse report: {e}"}
 
     return {"ok": hard == 0, "hard": hard, "soft": soft,
             "report_path": str(report_path), "error": None}
+
+
+def verify_surfaces(surfaces: tuple[Surface, ...], stack: Stack,
+                    prompt_dir: Path, dry_run: bool = False) -> dict:
+    """Verify every surface that declares a verify script and aggregate the result.
+
+    Returns {"ok", "hard", "soft", "report_path", "error"} where counts are
+    summed across surfaces. Surfaces without a verify script are skipped. When
+    no surface verifies anything, the workspace is reported clean.
+    """
+    if dry_run:
+        safe_print(f"    [DRY] Would verify {stack.display_name} workspace")
+        return {"ok": True, "hard": 0, "soft": 0, "report_path": None, "error": None}
+
+    checkable = [s for s in surfaces if s.verify_script is not None]
+    if not checkable:
+        return {"ok": True, "hard": 0, "soft": 0, "report_path": None, "error": None}
+
+    multi = len(checkable) > 1
+    total_hard = total_soft = 0
+    errors: list[str] = []
+    reports: list[str] = []
+    for surface in checkable:
+        name = f"verify_report_{surface.name}.json" if multi else "verify_report.json"
+        v = _verify_one(surface, stack, prompt_dir / name)
+        total_hard += v["hard"]
+        total_soft += v["soft"]
+        if v["error"]:
+            errors.append(v["error"])
+        if v["report_path"]:
+            reports.append(v["report_path"])
+
+    return {
+        "ok": not errors and total_hard == 0,
+        "hard": total_hard,
+        "soft": total_soft,
+        "report_path": "; ".join(reports) if reports else None,
+        "error": "; ".join(errors) if errors else None,
+    }
+
+
+def runner_surfaces(args, platform: Platform) -> tuple[Surface, ...]:
+    """Surfaces the runner resets/verifies for this run.
+
+    Multi-API platforms use their declared surfaces. Single-API platforms
+    synthesize one surface honoring the ``--reset-script`` / ``--verify-script``
+    overrides (which default to the manifest scripts)."""
+    if platform.surfaces:
+        return platform.surfaces
+    reset = getattr(args, "reset_script", None)
+    if not reset:
+        return ()
+    verify = getattr(args, "verify_script", None)
+    return (Surface(
+        name=platform.name,
+        reset_script=Path(reset),
+        seed_script=platform.seed_script or Path(reset),
+        verify_script=Path(verify) if verify else None,
+        token_env=platform.downstream_token_env,
+    ),)
 
 # ─────────────────────────────────────────────────────────────
 # Token trace parsing
@@ -369,6 +428,16 @@ _BYPASS_CAPABLE_TOOLS = [
     "Read", "Edit", "Write", "NotebookEdit", "Glob", "Grep",
 ]
 
+# MCP tools register as *deferred* tools: the session must call ToolSearch to
+# surface them before they can be invoked. Stripping all built-ins with
+# `--tools ""` also removes ToolSearch, leaving the agent unable to discover the
+# MCP tools under test — it then runs to completion with zero tool calls. So the
+# MCP-only branch keeps exactly this one built-in. It is read-only tool discovery:
+# it cannot reach the platform or read local files, so the no-bypass guarantee
+# holds. (The `keep_builtin_tools` branch keeps ToolSearch already — it is not in
+# _BYPASS_CAPABLE_TOOLS.)
+_MCP_DISCOVERY_TOOL = "ToolSearch"
+
 
 def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
     """Build the claude CLI invocation. Config dir routing is handled via env.
@@ -380,12 +449,25 @@ def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
     it must succeed or fail using the MCP(s) under test. A multi-API stack declares
     several servers so one prompt can span every surface.
 
-    Built-in tools are disabled with `--tools ""` by default. For
+    Built-in tools are reduced to ToolSearch only by default — the agent needs it
+    to surface the deferred MCP tools under test, but nothing else. For
     `keep_builtin_tools` stacks (e.g. Composio, whose remote server only
     registers its tools when built-in tools are present) they are kept available
     but the bypass-capable ones are denied, preserving the MCP-only guarantee.
+
+    A stack that declares `connector_servers` runs in "connector mode": the
+    official MCP is reached as a claude.ai account connector, which only loads
+    when --strict-mcp-config is ABSENT. Isolation then comes from blocking every
+    non-target tool via --disallowedTools (see below) instead of strict mode.
     """
-    mcp_allowlist = ",".join(f"mcp__{name}__*" for name in stack.mcp_servers)
+    # Tools the agent may call: configured MCP servers, any admitted account
+    # connectors (addressed by their tool-name prefix), plus ToolSearch to
+    # surface the deferred MCP tools.
+    allow_patterns = [
+        *(f"mcp__{name}__*" for name in stack.mcp_servers),
+        *(f"mcp__{prefix}__*" for _, prefix in stack.connector_servers),
+        _MCP_DISCOVERY_TOOL,
+    ]
     cmd = [
         "claude",
         "--print",
@@ -395,18 +477,98 @@ def build_claude_command(prompt_text: str, stack: Stack) -> list[str]:
         "--model", "sonnet",
         "--effort", "high",
     ]
+    disallowed: list[str] = []
     if stack.keep_builtin_tools:
-        cmd += ["--disallowedTools", *_BYPASS_CAPABLE_TOOLS]
+        disallowed += _BYPASS_CAPABLE_TOOLS
     else:
-        cmd += ["--tools", ""]
-    cmd += [
-        "--strict-mcp-config",
-        "--mcp-config", resolve_mcp_config(stack),
-        "--allowedTools", mcp_allowlist,
-        "--",
-        prompt_text,
-    ]
+        cmd += ["--tools", _MCP_DISCOVERY_TOOL]
+
+    # Always validate the configured servers are registered in the stack's
+    # config dir (raises otherwise); only strict mode passes the result as
+    # --mcp-config.
+    mcp_config_json = resolve_mcp_config(stack)
+    if stack.connector_servers:
+        # Account connectors only load with strict mode OFF, so the config dir's
+        # configured servers auto-load and the admitted connectors load from the
+        # account. Every other tool — the decommissioned local Gmail stdio
+        # server and all other account connectors — is hard-blocked via
+        # --disallowedTools, which hides AND blocks them even under
+        # --dangerously-skip-permissions.
+        disallowed += [f"mcp__{prefix}__*" for prefix in stack.deny_tool_prefixes]
+    else:
+        cmd += ["--strict-mcp-config", "--mcp-config", mcp_config_json]
+
+    if disallowed:
+        cmd += ["--disallowedTools", *disallowed]
+    cmd += ["--allowedTools", ",".join(allow_patterns), "--", prompt_text]
     return cmd
+
+
+def _server_segment(tool_name: str) -> str:
+    """Extract `<server>` from an `mcp__<server>__<tool>` tool name."""
+    return tool_name[len("mcp__"):].split("__", 1)[0]
+
+
+def connector_isolation_issue(stack: Stack, raw_output: str) -> str | None:
+    """Loud guard for connector-mode stacks (see build_claude_command).
+
+    Connector mode trades --strict-mcp-config for a deny-list, which can fail
+    SILENTLY in two ways that would otherwise be misread as a benchmark verdict:
+      - the admitted connector never loads (absent/renamed prefix) → the agent
+        finds no tools and the run looks like a task failure;
+      - a connector not in `deny_tool_prefixes` leaks in → the baseline session
+        can reach a surface it shouldn't, contaminating the comparison.
+    Returns a description of any violation (to record as a harness error), or
+    None when the run is clean or the stack is not in connector mode.
+    """
+    if not stack.connector_servers:
+        return None
+
+    allowed = set(stack.mcp_servers) | {prefix for _, prefix in stack.connector_servers}
+    # A connector counts as "loaded" if its tools were observably reachable —
+    # surfaced by ToolSearch or actually called. The `init` event is NOT reliable
+    # here: account connectors are fetched asynchronously and often aren't listed
+    # yet when init fires, so checking init alone yields false "did not load"
+    # reports. `seen` (search results ∪ calls) is the authoritative signal.
+    seen: set[str] = set()       # server segments the agent could actually reach
+    called: set[str] = set()     # full tool names the agent invoked
+    for line in raw_output.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if obj.get("type") == "assistant":
+            for block in obj.get("message", {}).get("content", []):
+                name = str(block.get("name", ""))
+                if block.get("type") == "tool_use" and name.startswith("mcp__"):
+                    called.add(name)
+                    seen.add(_server_segment(name))
+        elif obj.get("type") == "user":
+            content = obj.get("message", {}).get("content", [])
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                for ref in (block.get("content") or []) if isinstance(block, dict) else []:
+                    if isinstance(ref, dict) and ref.get("type") == "tool_reference":
+                        ref_name = str(ref.get("tool_name", ""))
+                        if ref_name.startswith("mcp__"):
+                            seen.add(_server_segment(ref_name))
+
+    problems: list[str] = []
+    for surface, prefix in stack.connector_servers:
+        if prefix not in seen:
+            problems.append(
+                f"connector for surface {surface!r} (prefix {prefix!r}) was never "
+                f"reachable (no ToolSearch hit or call); reachable servers: {sorted(seen)}"
+            )
+    leaked = sorted({t for t in called if _server_segment(t) not in allowed})
+    if leaked:
+        problems.append(f"tools outside the allow-set were called: {leaked}")
+    return "; ".join(problems) if problems else None
+
 
 def run_session(prompt: dict, stack: Stack, platform: Platform,
                 session_dir: Path, timeout: int, dry_run: bool,
@@ -451,9 +613,12 @@ def run_session(prompt: dict, stack: Stack, platform: Platform,
     cmd = build_claude_command(prompt_text, stack)
 
     config_dir_path = os.path.expanduser(stack.config_dir)
-    env = {**os.environ,
-           platform.downstream_token_env: token,
-           "CLAUDE_CONFIG_DIR": config_dir_path}
+    env = {**os.environ, "CLAUDE_CONFIG_DIR": config_dir_path}
+    # Single-API stacks normalize their token to a fixed downstream var for the
+    # MCP server under test. Multi-API stacks have no single token: their MCP
+    # servers resolve credentials from the (already inherited) platform .env.
+    if platform.downstream_token_env:
+        env[platform.downstream_token_env] = token
 
     session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -517,6 +682,15 @@ def run_session(prompt: dict, stack: Stack, platform: Platform,
     initial_tokens = 0
     if token_trace and token_trace[0].get("event") == "session_start":
         initial_tokens = token_trace[0].get("turn_input_tokens", 0)
+
+    # Connector-mode isolation guard: a silent connector-absence or deny-list
+    # leak is a broken benchmark setup, not a task result — surface it loudly as
+    # an invocation error. Skip when the session already errored (timeout/exit).
+    if error_msg is None:
+        iso = connector_isolation_issue(stack, raw_output)
+        if iso:
+            error_msg = f"connector isolation violation: {iso}"
+            safe_print(f"    [{display}] ⚠️  {error_msg}")
 
     metrics.update({
         "stack":         stack.name,
@@ -922,7 +1096,7 @@ def run(args, platform, stack: Stack):
 
     results: dict = {}
     total     = len(prompts)
-    token_env = platform.downstream_token_env
+    surfaces  = runner_surfaces(args, platform)
 
     for idx, p in enumerate(prompts, 1):
         pid   = p["id"]
@@ -932,8 +1106,7 @@ def run(args, platform, stack: Stack):
         print(c("bold", f"  [{idx}/{total}] Prompt {pid}: {title}  [{p.get('difficulty','?')} / {p.get('category','?')}]"))
 
         if not args.skip_reset:
-            reset_workspace(args.reset_script, pid, token, token_env,
-                            args.dry_run, stack.name)
+            reset_surfaces(surfaces, pid, stack, args.dry_run)
 
         prompt_dir = run_dir / f"p{pid}"
 
@@ -943,9 +1116,7 @@ def run(args, platform, stack: Stack):
             and (args.verify_every_n <= 1 or (idx - 1) % args.verify_every_n == 0)
         )
         if verify_due:
-            verify_report = prompt_dir / "verify_report.json"
-            v = verify_workspace(args.verify_script, stack, token, token_env,
-                                 verify_report, args.dry_run)
+            v = verify_surfaces(surfaces, stack, prompt_dir, args.dry_run)
             if v["error"]:
                 safe_print(c("yellow", f"    ! [{stack.display_name}] verify: {v['error']}"))
             elif v["hard"] or v["soft"]:

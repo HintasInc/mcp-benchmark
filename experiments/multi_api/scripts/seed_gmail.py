@@ -2,7 +2,7 @@
 """
 seed_gmail.py — multi-API benchmark Gmail-surface seeder.
 
-Builds the acting agent's mailbox (persona claude@hintas.co) into the
+Builds the acting agent's mailbox (persona Miranda) into the
 multi-API seed snapshot: a handful of inbound threads, one short two-sided
 partnership negotiation thread, and a triage set — all anchored relative to
 ``benchmarking.clock.BENCHMARK_NOW``.
@@ -84,7 +84,7 @@ SEEDED_THREADS: list[dict] = [
             {
                 "logical_id": "TH_EXPORT_m1",
                 "from": "Dana Whitfield <dana@northwind-systems.example>",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Urgent: export failing in production",
                 "offset_hours": -6,
                 "labelIds": ["INBOX", "UNREAD"],
@@ -102,15 +102,15 @@ SEEDED_THREADS: list[dict] = [
         "messages": [
             {
                 "logical_id": "TH_SSO_m1",
-                "from": "rhea@hintas.co",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_U07RHEA}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Please add SSO docs",
                 "offset_hours": -30,
                 # READ (no UNREAD) so it stays out of the triage count.
                 "labelIds": ["INBOX"],
                 "body": (
                     "Can we get SSO setup docs added to the help center? "
-                    "Two customers asked this week. Thanks!\n\n— Rhea"
+                    "Two customers asked this week. Thanks!\n\n— {{NAME_U07RHEA}}"
                 ),
             },
         ],
@@ -121,7 +121,7 @@ SEEDED_THREADS: list[dict] = [
             {
                 "logical_id": "TH_PARTNERSHIP_m1",
                 "from": "Mara Lindqvist <mara@brightpath.example>",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Partnership terms",
                 "offset_hours": -72,
                 "labelIds": ["INBOX"],
@@ -133,7 +133,7 @@ SEEDED_THREADS: list[dict] = [
             },
             {
                 "logical_id": "TH_PARTNERSHIP_m2",
-                "from": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_U01MIRANDA}}",
                 "to": "mara@brightpath.example",
                 "subject": "Re: Partnership terms",
                 "offset_hours": -50,
@@ -146,7 +146,7 @@ SEEDED_THREADS: list[dict] = [
             {
                 "logical_id": "TH_PARTNERSHIP_m3",
                 "from": "Mara Lindqvist <mara@brightpath.example>",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Re: Partnership terms",
                 "offset_hours": -26,
                 "labelIds": ["INBOX"],
@@ -164,15 +164,15 @@ SEEDED_THREADS: list[dict] = [
         "messages": [
             {
                 "logical_id": "TH_PRIYA_m1",
-                "from": "priya@hintas.co",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_NEWHIRE}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Excited to join Hintas!",
                 "offset_hours": -40,
                 # READ — the new-hire inbound contact.
                 "labelIds": ["INBOX"],
                 "body": (
                     "Hi! I'm really looking forward to starting. Is there "
-                    "anything I should set up before day one?\n\n— Priya"
+                    "anything I should set up before day one?\n\n— {{NAME_NEWHIRE}}"
                 ),
             },
         ],
@@ -182,14 +182,14 @@ SEEDED_THREADS: list[dict] = [
         "messages": [
             {
                 "logical_id": "TH_TRIAGE1_m1",
-                "from": "miranda@hintas.co",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_U05CLAUDE}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Brand kit needs your sign-off",
                 "offset_hours": -20,
                 "labelIds": ["INBOX", "UNREAD"],
                 "body": (
                     "The updated brand kit is ready for your sign-off before "
-                    "we send it to print. — Miranda"
+                    "we send it to print. — {{NAME_U05CLAUDE}}"
                 ),
             },
         ],
@@ -199,14 +199,14 @@ SEEDED_THREADS: list[dict] = [
         "messages": [
             {
                 "logical_id": "TH_TRIAGE2_m1",
-                "from": "devon@hintas.co",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_U06DEVON}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Build broke on main",
                 "offset_hours": -10,
                 "labelIds": ["INBOX", "UNREAD"],
                 "body": (
                     "Main is red after the last merge — looks like the "
-                    "analytics module. Can you take a look? — Devon"
+                    "analytics module. Can you take a look? — {{NAME_U06DEVON}}"
                 ),
             },
         ],
@@ -216,14 +216,14 @@ SEEDED_THREADS: list[dict] = [
         "messages": [
             {
                 "logical_id": "TH_TRIAGE3_m1",
-                "from": "tomas@hintas.co",
-                "to": "{{EMAIL_U05CLAUDE}}",
+                "from": "{{EMAIL_U08TOMAS}}",
+                "to": "{{EMAIL_U01MIRANDA}}",
                 "subject": "Review request: pricing tiers",
                 "offset_hours": -5,
                 "labelIds": ["INBOX", "UNREAD"],
                 "body": (
                     "Could you review the proposed pricing tiers doc today? "
-                    "— Tomás"
+                    "— {{NAME_U08TOMAS}}"
                 ),
             },
         ],

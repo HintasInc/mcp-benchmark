@@ -55,11 +55,46 @@ class Stack:
     # completes and no MCP tools load. When True, keep built-in tools available
     # but deny the ones that could bypass the MCP under test (see runner.py).
     keep_builtin_tools: bool = False
+    # claude.ai account connectors this stack admits, as (surface, tool_prefix)
+    # pairs (e.g. ("gmail", "claude_ai_Gmail")). Some official MCPs (the hosted
+    # Gmail MCP) are only reachable as an entitled account connector, not a local
+    # server. A non-empty value puts the stack in "connector mode": the runner
+    # drops --strict-mcp-config (the only way account connectors load) and
+    # isolates by blocking every non-target tool via deny_tool_prefixes instead.
+    connector_servers: tuple[tuple[str, str], ...] = ()
+    # Tool-name prefixes the runner hard-blocks (via --disallowedTools) in
+    # connector mode so only the configured servers + admitted connectors stay
+    # reachable: the decommissioned local Gmail stdio server plus every other
+    # account connector synced to the stack's login. Account-state-dependent.
+    deny_tool_prefixes: tuple[str, ...] = ()
 
     @property
     def mcp_server(self) -> str:
         """The primary (first) MCP server — for logging and single-server use."""
         return self.mcp_servers[0]
+
+
+@dataclass(frozen=True)
+class Surface:
+    """One workspace the orchestrator resets / seeds / verifies for a stack.
+
+    A single-API platform has exactly one surface, synthesized from the
+    top-level reset/seed/verify scripts (see ``Platform.setup_surfaces``). A
+    multi-API platform declares several via ``[[surfaces]]`` — one per API it
+    stitches — each with its own scripts.
+
+    ``token_env``: when set, the orchestrator injects the stack's token under
+    this env var before running the surface's scripts (the single-API contract,
+    where one stack token normalizes to a fixed downstream var). When ``None``,
+    the script self-resolves its credentials from the platform ``.env`` — a
+    multi-API surface reads the stack-prefixed ``BASELINE_*``/``HINTAS_*`` vars
+    itself and only needs ``--stack`` passed through.
+    """
+    name: str
+    reset_script: Path
+    seed_script: Path
+    verify_script: Path | None = None
+    token_env: str | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +124,30 @@ class Platform:
     verify_script: Path | None = None
     state_file_template: str | None = None
     prereq_file_template: str | None = None
+    # Explicit per-API surfaces (multi-API platforms only). Empty for single-API
+    # platforms, which synthesize one surface in `setup_surfaces`.
+    surfaces: tuple[Surface, ...] = ()
+
+    @property
+    def setup_surfaces(self) -> tuple[Surface, ...]:
+        """The surfaces to reset / seed / verify for this platform.
+
+        A multi-API platform declares them explicitly via ``[[surfaces]]``. A
+        single-API platform synthesizes one surface from the top-level scripts,
+        injecting the stack token under ``downstream_token_env`` (the established
+        single-API contract). Returns ``()`` when neither is configured.
+        """
+        if self.surfaces:
+            return self.surfaces
+        if not (self.reset_script and self.seed_script):
+            return ()
+        return (Surface(
+            name=self.name,
+            reset_script=self.reset_script,
+            seed_script=self.seed_script,
+            verify_script=self.verify_script,
+            token_env=self.downstream_token_env,
+        ),)
 
     @property
     def stack_names(self) -> tuple[str, ...]:
@@ -182,6 +241,10 @@ def load_platform_from_path(toml_path: Path) -> Platform:
             token_env=s["token_env"],
             mcp_servers=_normalize_mcp_servers(s),
             keep_builtin_tools=s.get("keep_builtin_tools", False),
+            connector_servers=tuple(
+                (c["surface"], c["tool_prefix"]) for c in s.get("connector_servers", [])
+            ),
+            deny_tool_prefixes=tuple(s.get("deny_tool_prefixes", [])),
         )
         for s in stacks_data
     )
@@ -199,6 +262,17 @@ def load_platform_from_path(toml_path: Path) -> Platform:
         rel = paths_data.get(key)
         return platform_root / rel if rel else None
 
+    surfaces = tuple(
+        Surface(
+            name=s["name"],
+            reset_script=platform_root / s["reset_script"],
+            seed_script=platform_root / s["seed_script"],
+            verify_script=(platform_root / s["verify_script"]) if s.get("verify_script") else None,
+            token_env=s.get("token_env"),
+        )
+        for s in data.get("surfaces", [])
+    )
+
     return Platform(
         name=data["name"],
         display_name=data["display_name"],
@@ -213,6 +287,7 @@ def load_platform_from_path(toml_path: Path) -> Platform:
         analysis=analysis,
         state_file_template=paths_data.get("state_file_template"),
         prereq_file_template=paths_data.get("prereq_file_template"),
+        surfaces=surfaces,
     )
 
 

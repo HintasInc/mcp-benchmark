@@ -3,7 +3,7 @@
 mint_gmail_token.py — issue a Gmail refresh token for a multi-API stack.
 
 Runs the OAuth 2.0 "Desktop app" installed-app flow once: opens a browser,
-you sign in as the stack's mailbox owner (the agent, claude@…) and grant the
+you sign in as the stack's mailbox owner (the agent's Gmail mailbox) and grant the
 scopes, and it prints the refresh token to paste into experiments/multi_api/.env
 as BASELINE_GMAIL_TOKEN / HINTAS_GMAIL_TOKEN.
 

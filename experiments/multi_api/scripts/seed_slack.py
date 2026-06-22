@@ -15,7 +15,7 @@ run, exactly like the reference). Generic plumbing — console output, persona
 cast, state I/O — comes from the shared ``common`` module.
 
 Token:
-    export SLACK_TOKEN=xoxp-...          # the agent's user token (claude@hintas.co)
+    export SLACK_TOKEN=xoxp-...          # the agent's user token (Miranda)
     python seed_slack.py                 # full seed
     python seed_slack.py --verify        # dry-run: report what's missing
 
@@ -117,7 +117,7 @@ def api_get_paginated(method: str, params: dict, items_key: str, limit: int = 20
 def require_token(env_var: str = "SLACK_TOKEN") -> None:
     """Exit with a friendly message when the resolved token is empty."""
     if not TOKEN:
-        err(f"Set {env_var} env var or pass --token xoxp-... (agent token, claude@hintas.co)")
+        err(f"Set {env_var} env var or pass --token xoxp-... (agent token, Miranda)")
         sys.exit(1)
 
 
@@ -166,7 +166,7 @@ DM_ID_MAP: dict[str, str] = {}
 # label → {ts, channel_logical, author_logical, thread_parent}
 MSG_TS_MAP: dict[str, dict] = {}
 
-AGENT = agent_logical_id()  # U05CLAUDE
+AGENT = agent_logical_id()  # U01MIRANDA (Miranda is the acting agent)
 # The real Slack user id the token authenticates as (set in main() from
 # auth.test). The token owner is already a member of channels they create and
 # cannot be invited to one (cant_invite_self), so they're excluded from invites

@@ -467,6 +467,23 @@ def _index_rows_by_title(db_id: str, title_prop: str) -> dict[str, str]:
             out[text] = r["id"]
     return out
 
+def people_directory() -> list[str]:
+    """Logical ids that get a People-directory row.
+
+    Every active human (leads + members) PLUS the acting agent: the agent
+    persona is a real member of the workspace directory even though it is
+    excluded from outbound team/leads email distributions (it is the sender,
+    not a recipient). The candidate is still excluded — she is provisioned by a
+    prompt, not pre-seeded. The directory membership the seed produces here is
+    captured into workspace_state and is the answer key graders read back.
+    """
+    ids = list(team_distribution())
+    agent = agent_logical_id()
+    if agent not in ids:
+        ids.append(agent)
+    return ids
+
+
 def seed_people() -> None:
     section("4a. Seeding DB_PEOPLE rows")
     db_id = DB_ID_MAP.get("DB_PEOPLE")
@@ -474,7 +491,7 @@ def seed_people() -> None:
         warn("DB_PEOPLE missing — skipping rows")
         return
     existing = _index_rows_by_title(db_id, "Name")
-    for logical in team_distribution():
+    for logical in people_directory():
         label = f"PEOPLE_{logical}"
         name = name_of(logical)
         if name in existing:
@@ -484,7 +501,11 @@ def seed_people() -> None:
         if DRY_RUN:
             warn(f"{label} ('{name}') MISSING (would create)")
             continue
+        # People.Team is a select of {leads, members}; the agent's logical team
+        # ('agent') has no directory option, so it lists as a regular member.
         team = common.USERS.get(logical, {}).get("team", "members")
+        if team not in ("leads", "members"):
+            team = "members"
         props = {
             "Name":   title_value(name),
             "Email":  email_value(email_of(logical)),
@@ -533,9 +554,9 @@ def seed_projects() -> None:
         log(f"Created {label} ('{task}') → {page['id']}")
         time.sleep(0.15)
 
-# (label, name, status, person_email)
+# (label, person_logical, status) — name + email resolve from the user map.
 ONBOARDING_ROWS = [
-    ("ONB_PRIYA", "Priya Nakamura", "Draft", "priya@hintas.co"),
+    ("ONB_PRIYA", "NEWHIRE", "Draft"),
 ]
 
 def seed_onboarding() -> None:
@@ -545,7 +566,9 @@ def seed_onboarding() -> None:
         warn("DB_ONBOARDING missing — skipping rows")
         return
     existing = _index_rows_by_title(db_id, "Name")
-    for label, name, status, person in ONBOARDING_ROWS:
+    for label, person_logical, status in ONBOARDING_ROWS:
+        name = name_of(person_logical)
+        person = email_of(person_logical)
         if name in existing:
             ROW_ID_MAP[label] = existing[name]
             log(f"{label} ('{name}') already exists → {existing[name]}")
