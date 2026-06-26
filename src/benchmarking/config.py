@@ -103,6 +103,11 @@ class AnalysisConfig:
     config_dir: str
     prompt_template: Path
     model: str
+    # When true, the grader emits binary verdicts only (PASS/FAIL/ERROR, no
+    # PARTIAL). Multi-API grading is all-or-nothing: a prompt PASSes only if
+    # every task on every surface completed. Single-API platforms leave this
+    # false and keep PARTIAL.
+    binary: bool = False
 
 
 @dataclass(frozen=True)
@@ -254,6 +259,7 @@ def load_platform_from_path(toml_path: Path) -> Platform:
         config_dir=_resolve(analysis_data["config_dir_env"], analysis_data["config_dir_default"]),
         prompt_template=ANALYSIS_DIR / analysis_data["prompt_template"],
         model=analysis_data["model"],
+        binary=analysis_data.get("binary", False),
     )
 
     platform_root = toml_path.parent

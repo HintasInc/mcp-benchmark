@@ -84,11 +84,16 @@ display_name       = "Multi-API MCP - Hintas"
 config_dir_env     = "MULTI_API_HINTAS_CONFIG_DIR"
 config_dir_default = "~/.claude-multi-api-hintas"
 token_env          = "HINTAS_SLACK_TOKEN"
-mcp_server         = "hintas-multi-api"
+# The unified Hintas server is registered in the hintas config dir as
+# 'multi-benchmark' (https://multi-benchmark.infra.hintas.com/mcp).
+mcp_server         = "multi-benchmark"
 
 [analysis]
 display_name       = "Analyzer Claude"
 config_dir_env     = "ANALYSIS_CONFIG_DIR"
 config_dir_default = "~/.claude-analyzer"
-prompt_template    = "per_run/analysis_prompt.md"
+prompt_template    = "per_run/multi_api_analysis_prompt.md"
 model              = "claude-sonnet-4-6"
+# Multi-API grading is all-or-nothing: PASS only when every task on every
+# surface completed; any failed task ⇒ FAIL. No PARTIAL.
+binary             = true

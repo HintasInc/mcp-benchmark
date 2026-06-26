@@ -32,7 +32,10 @@ from pathlib import Path
 from benchmarking.prompts import load_prompts as _load_prompts_with_substitutions
 
 
-MCP_PREFIX_RE = re.compile(r"^mcp__[^_]+(?:-[^_]+)*__")
+# Strip the `mcp__<server>__` prefix. The server segment may itself contain
+# underscores (e.g. `mcp__claude_ai_Gmail__`) or hyphens (`mcp__multi-benchmark__`),
+# so match non-greedily up to the second `__` rather than a single segment.
+MCP_PREFIX_RE = re.compile(r"^mcp__.+?__")
 BASE64_RE = re.compile(r"[A-Za-z0-9+/=]{500,}")
 
 SLACK_API_METHODS = {
@@ -158,6 +161,17 @@ TEXT_HEAD, TEXT_TAIL = 700, 200
 RESULT_HEAD, RESULT_TAIL = 1400, 500
 TOOL_ARG_BUDGET = 1000
 
+# Multi-API runs are graded per surface, but the unified (Hintas) stack reaches
+# all three surfaces through generic dispatch tools (`search_tools`,
+# `execute_tools`): the real Slack/Gmail/Notion methods and their returns live
+# *inside* one dispatch call's arguments and result, not as separate tool_use
+# blocks. Observed dispatch results run to ~16k chars; the default ~1.9k result
+# budget would discard most of the per-surface evidence the rubric requires.
+# Multi-API runs therefore get much larger result/arg budgets so the grader can
+# see what each surface actually did.
+MULTI_API_RESULT_HEAD, MULTI_API_RESULT_TAIL = 5000, 2000
+MULTI_API_TOOL_ARG_BUDGET = 3000
+
 
 def _extract_tool_result_text(content) -> str:
     """Extract a single text blob from a tool_result's content field.
@@ -186,8 +200,19 @@ def _extract_tool_result_text(content) -> str:
     return "\n---\n".join(parts)
 
 
-def build_transcript(session_log: Path, prompt_text: str) -> tuple[list[dict], dict]:
+def build_transcript(
+    session_log: Path,
+    prompt_text: str,
+    *,
+    result_head: int = RESULT_HEAD,
+    result_tail: int = RESULT_TAIL,
+    tool_arg_budget: int = TOOL_ARG_BUDGET,
+) -> tuple[list[dict], dict]:
     """Walk JSONL → cleaned, bounded transcript.
+
+    ``result_head``/``result_tail``/``tool_arg_budget`` bound how much of each
+    tool result and tool-call argument payload is kept; multi-API runs pass
+    larger budgets so dispatch-tool payloads stay legible (see module constants).
 
     Returns (entries, meta).
     """
@@ -294,7 +319,7 @@ def build_transcript(session_log: Path, prompt_text: str) -> tuple[list[dict], d
                         seen_tool.add(tid)
                     raw_name = block.get("name", "unknown")
                     args = block.get("input", {}) or {}
-                    args_shrunk, args_t = truncate_json_payload(args, max_chars=TOOL_ARG_BUDGET)
+                    args_shrunk, args_t = truncate_json_payload(args, max_chars=tool_arg_budget)
                     if args_t:
                         tools_truncated += 1
                     entries.append({
@@ -316,7 +341,7 @@ def build_transcript(session_log: Path, prompt_text: str) -> tuple[list[dict], d
             tid = block.get("tool_use_id", "")
             is_error = bool(block.get("is_error", False))
             text = _extract_tool_result_text(block.get("content", ""))
-            excerpt, was_t, total = smart_truncate(text, RESULT_HEAD, RESULT_TAIL)
+            excerpt, was_t, total = smart_truncate(text, result_head, result_tail)
             if was_t:
                 results_truncated += 1
             entries.append({
@@ -533,6 +558,16 @@ def precompute(run_dir: Path, prompts_file: Path, stack: str) -> dict:
     platform_name = raw.get("platform")
     hintas_params = raw.get("hintas_params")
 
+    # Multi-API dispatch payloads need far larger transcript budgets so the
+    # grader can verify each surface from inside the dispatch call's arguments
+    # and result. Single-API platforms keep the default (smaller) budgets.
+    if platform_name == "multi_api":
+        result_head, result_tail = MULTI_API_RESULT_HEAD, MULTI_API_RESULT_TAIL
+        tool_arg_budget = MULTI_API_TOOL_ARG_BUDGET
+    else:
+        result_head, result_tail = RESULT_HEAD, RESULT_TAIL
+        tool_arg_budget = TOOL_ARG_BUDGET
+
     prompt_dirs = sorted(
         (p for p in run_dir.iterdir()
          if p.is_dir() and p.name.startswith("p") and p.name[1:].isdigit()),
@@ -564,7 +599,11 @@ def precompute(run_dir: Path, prompts_file: Path, stack: str) -> dict:
             }
 
         tokens = parse_token_trace(token_trace)
-        transcript, transcript_meta = build_transcript(session_log, prompt_text)
+        transcript, transcript_meta = build_transcript(
+            session_log, prompt_text,
+            result_head=result_head, result_tail=result_tail,
+            tool_arg_budget=tool_arg_budget,
+        )
 
         raw_row = results.get(f"p{pid}_{stack}", {})
 
@@ -573,6 +612,10 @@ def precompute(run_dir: Path, prompts_file: Path, stack: str) -> dict:
             "difficulty":    prompt.get("difficulty", "?"),
             "category":      prompt.get("category", "?"),
             "success_criteria": prompt.get("success_criteria", []),
+            # Multi-API fields; absent on single-API prompts (empty/None defaults).
+            "apis":                  prompt.get("apis", []),
+            "cross_api_dependency":  prompt.get("cross_api_dependency"),
+            "feasible_on_free_plan": prompt.get("feasible_on_free_plan"),
             "prompt":        prompt_text,
             stack: {
                 "has_result":        parsed["has_result"],
