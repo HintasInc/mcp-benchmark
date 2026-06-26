@@ -24,3 +24,6 @@ node_modules/
 **/archive/
 **/final/
 !experiments/*/runs/**/analysis.md
+
+# Local seed/reset run artifacts
+experiments/multi_api/scripts/seedlogs/
