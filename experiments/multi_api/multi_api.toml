@@ -1,0 +1,99 @@
+# Multi-API platform manifest.
+#
+# This suite measures the capability that distinguishes the Hintas deployment:
+# serving Slack, Gmail, and Notion from one MCP server so a single prompt can be
+# satisfied end-to-end across surfaces. It compares one unified Hintas server
+# against a baseline that stitches together the three official single-API MCP
+# servers in one session.
+
+name         = "multi_api"
+display_name = "Multi-API"
+
+# No single downstream_token_env: there is no one workspace token. Each surface
+# reads its own stack-prefixed credentials (BASELINE_SLACK_TOKEN,
+# HINTAS_NOTION_TOKEN, …) straight from experiments/multi_api/.env, which
+# scripts/common.py auto-loads on import.
+
+[paths]
+# All paths are resolved relative to this manifest's directory
+# (experiments/multi_api/).
+prompts_file = "prompts/benchmark_prompts.json"
+output_dir   = "runs"
+# No top-level reset_script / seed_script / verify_script: multi_api resets and
+# seeds each surface with its own standalone script (see [[surfaces]] below).
+#
+# No state_file_template either: multi_api keeps a separate state file per
+# (api, stack) — scripts/workspace_state_<api>_<stack>.json — managed directly
+# by scripts/common.py, not via the manifest template.
+
+# Per-API surfaces. The orchestrator resets/seeds each one with --stack passed
+# through; the scripts self-resolve their BASELINE_*/HINTAS_* credentials from
+# experiments/multi_api/.env, so no token is injected (token_env omitted). No
+# verify_script yet — verification is skipped for these surfaces.
+[[surfaces]]
+name         = "slack"
+reset_script = "scripts/reset_slack.py"
+seed_script  = "scripts/seed_slack.py"
+
+[[surfaces]]
+name         = "gmail"
+reset_script = "scripts/reset_gmail.py"
+seed_script  = "scripts/seed_gmail.py"
+
+[[surfaces]]
+name         = "notion"
+reset_script = "scripts/reset_notion.py"
+seed_script  = "scripts/seed_notion.py"
+
+# stacks[0] is the baseline; stacks[1] is the variant under evaluation.
+# Report deltas are computed as baseline − hintas.
+#
+# The baseline stitches the three official single-API servers into one session
+# via the plural `mcp_servers`; the hintas stack serves all three from one
+# unified server via the singular `mcp_server`.
+[[stacks]]
+name               = "baseline"
+display_name       = "Multi-API MCP - Baseline (Official)"
+config_dir_env     = "MULTI_API_BASELINE_CONFIG_DIR"
+config_dir_default = "~/.claude-multi-api-baseline"
+token_env          = "BASELINE_SLACK_TOKEN"
+# Slack and Notion are official single-API servers configured in the stack's
+# config dir. Gmail is the hosted official Gmail MCP, which only executes for an
+# entitled OAuth client — reachable here solely as the account-synced claude.ai
+# Gmail connector. Declaring it under `connector_servers` switches this stack to
+# connector mode (see runner.build_claude_command): --strict-mcp-config is
+# dropped so the connector loads, and `deny_tool_prefixes` blocks every other
+# tool so isolation is preserved.
+mcp_servers        = ["slack", "notion"]
+connector_servers  = [{ surface = "gmail", tool_prefix = "claude_ai_Gmail" }]
+# Hard-blocked tool prefixes: the decommissioned local Gmail stdio server plus
+# every other account connector synced to the baseline login, so only Slack,
+# Notion, and the Gmail connector remain reachable. Account-state-dependent —
+# add any newly connected account connector here.
+deny_tool_prefixes = [
+  "gmail",
+  "claude_ai_Discord", "claude_ai_Expedia", "claude_ai_Google_Drive",
+  "claude_ai_Google_Calendar", "claude_ai_Gamma", "claude_ai_Instacart",
+  "claude_ai_HyperFrames_by_HeyGen", "claude_ai_coingecko",
+  "claude_ai_F_inc_MCP", "claude_ai_test",
+]
+
+[[stacks]]
+name               = "hintas"
+display_name       = "Multi-API MCP - Hintas"
+config_dir_env     = "MULTI_API_HINTAS_CONFIG_DIR"
+config_dir_default = "~/.claude-multi-api-hintas"
+token_env          = "HINTAS_SLACK_TOKEN"
+# The unified Hintas server is registered in the hintas config dir as
+# 'multi-benchmark' (https://multi-benchmark.infra.hintas.com/mcp).
+mcp_server         = "multi-benchmark"
+
+[analysis]
+display_name       = "Analyzer Claude"
+config_dir_env     = "ANALYSIS_CONFIG_DIR"
+config_dir_default = "~/.claude-analyzer"
+prompt_template    = "per_run/multi_api_analysis_prompt.md"
+model              = "claude-sonnet-4-6"
+# Multi-API grading is all-or-nothing: PASS only when every task on every
+# surface completed; any failed task ⇒ FAIL. No PARTIAL.
+binary             = true

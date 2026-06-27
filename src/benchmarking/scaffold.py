@@ -66,6 +66,9 @@ state_file_template  = "scripts/workspace_state_ids_{stack}.json"
 prereq_file_template = "scripts/prerequisites_{stack}.local.json"
 
 # stacks[0] is the baseline; stacks[1] is the variant under evaluation.
+# A stack declares either a single `mcp_server = "x"` or, for a multi-API stack
+# that stitches several official servers in one session, a list:
+#   mcp_servers = ["slack", "gmail", "notion"]
 [[stacks]]
 name               = "__BASELINE_NAME__"
 display_name       = "__BASELINE_DISPLAY__"

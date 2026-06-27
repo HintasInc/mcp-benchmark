@@ -17,9 +17,10 @@ from collections import Counter
 from pathlib import Path
 from statistics import mean
 
+from benchmarking.analysis.categories import resolve_categories
+
 VERDICT_GLYPH = {"PASS": "✓", "PARTIAL": "◐", "FAIL": "✗", "ERROR": "⚠"}
 DIFFICULTIES  = ["L1", "L2", "L3", "L4", "L5"]
-CATEGORIES    = ["retrieval", "search", "write", "workflow", "orchestration", "edge_case"]
 
 
 def fmt_int(x):    return f"{int(round(x)):,}" if x is not None else ""
@@ -156,11 +157,19 @@ def pick_notable(prompts: list[dict], limit: int = 8) -> list[dict]:
     return chosen
 
 
-def render(run_dir: Path, verbose: bool = False) -> str:
+def render(run_dir: Path, verbose: bool = False, *,
+           binary: bool | None = None, is_multi_api: bool | None = None) -> str:
     data = json.loads((run_dir / "analysis.json").read_text())
     ts, stack, _label, prompts = normalize(data)
     if not ts:
         ts = run_dir.name
+
+    # The pipeline passes these from the platform config; the standalone CLI
+    # falls back to the run-dir path (experiments/<platform>/runs/<ts>).
+    if is_multi_api is None:
+        is_multi_api = run_dir.parent.parent.name == "multi_api"
+    if binary is None:
+        binary = is_multi_api
 
     platform = platform_name(run_dir)
     headline_name = headline_display_name(stack, data)
@@ -178,10 +187,16 @@ def render(run_dir: Path, verbose: bool = False) -> str:
 
     L.append("## Verdict legend")
     L.append("")
-    L.append("- `✓ PASS` — every success criterion met; usable answer; no blocking tool failure.")
-    L.append("- `◐ PARTIAL` — some criteria met; partial multi-step or one criterion missed.")
+    if binary:
+        L.append("- `✓ PASS` — **every** task on **every** surface completed and the "
+                 "cross-API handoff held; usable, grounded answer.")
+    else:
+        L.append("- `✓ PASS` — every success criterion met; usable answer; no blocking tool failure.")
+        L.append("- `◐ PARTIAL` — some criteria met; partial multi-step or one criterion missed.")
     L.append("- `✗ FAIL` — core task not accomplished. **Includes environmental rejections** "
-             "(\"user doesn't exist\", \"page not shared\", \"integration lacks access\", server refused).")
+             "(\"user doesn't exist\", \"page not shared\", \"integration lacks access\", server refused)."
+             + (" On this platform, **any** failed/skipped/blocked/fabricated task fails the prompt."
+                if binary else ""))
     L.append("- `⚠ ERROR` — infrastructure failure (no result, orchestrator error, or `result_subtype: error` with no usable output).")
     L.append("")
 
@@ -194,7 +209,8 @@ def render(run_dir: Path, verbose: bool = False) -> str:
         L.append(f"| Prompts run | {agg['n']} |")
         L.append(f"| Success rate | {fmt_pct(agg['success_rate'])} |")
         L.append(f"| Passes | {agg['pass']} |")
-        L.append(f"| Partial | {agg['partial']} |")
+        if not binary:
+            L.append(f"| Partial | {agg['partial']} |")
         L.append(f"| Fails | {agg['fail']} |")
         L.append(f"| Errors | {agg['error']} |")
         L.append(f"| Avg initial context | {fmt_float(agg['avg_initial_context'], 0)} |")
@@ -207,6 +223,16 @@ def render(run_dir: Path, verbose: bool = False) -> str:
     else:
         L.append("_No prompts graded._")
     L.append("")
+
+    if is_multi_api:
+        L.append("> **Tool-call metrics are stack-internal, not head-to-head.** Each row "
+                 "counts one MCP call per `tool_use`. The baseline surfaces every API "
+                 "method as its own call, while the Hintas unified server runs several "
+                 "methods inside one `execute_tools` dispatch — so a single dispatch may "
+                 "hide multiple surface methods (and an internal surface failure where the "
+                 "wrapper returns success does not register as a failed call). Compare "
+                 "verdicts and tokens across stacks; treat tool-call counts as per-stack.")
+        L.append("")
 
     # ── Breakdown by difficulty ─────────────────────────────────────
     L.append("## Breakdown by difficulty")
@@ -224,7 +250,8 @@ def render(run_dir: Path, verbose: bool = False) -> str:
     L.append("")
     L.append("| Category | n | Success rate | P/F/E |")
     L.append("|:---------|--:|-------------:|:-----:|")
-    for row in breakdown(prompts, "category", CATEGORIES):
+    categories = resolve_categories(p["category"] for p in prompts)
+    for row in breakdown(prompts, "category", categories):
         L.append(f"| {row['bucket']} | {row['n']} | "
                  f"{fmt_pct(row['success_rate'])} | "
                  f"{row['partial']}/{row['fail']}/{row['error']} |")

@@ -73,9 +73,9 @@ def add_run_arguments(p: argparse.ArgumentParser, platform: Platform) -> None:
     p.add_argument("--dry-run",      action="store_true")
     p.add_argument("--skip-setup",   action="store_true",
                    help="Skip reset+seed phases (workspace is already in baseline state)")
-    p.add_argument("--reset-script",  default=str(platform.reset_script),
+    p.add_argument("--reset-script",  default=str(platform.reset_script) if platform.reset_script else None,
                    help="Per-prompt reset script (default: platform manifest)")
-    p.add_argument("--verify-script", default=str(platform.verify_script),
+    p.add_argument("--verify-script", default=str(platform.verify_script) if platform.verify_script else None,
                    help="Post-reset verification script (default: platform manifest)")
     p.add_argument("--skip-reset",    action="store_true",
                    help="Skip the per-prompt workspace reset between sessions")
@@ -135,11 +135,17 @@ def require_token(platform: Platform, stack: Stack) -> None:
     sys.exit(2)
 
 
-def run_with_token(script: Path, token: str, token_env: str, label: str,
+def run_with_token(script: Path, token: str, token_env: str | None, label: str,
                    extra_args: list[str] | None = None) -> int:
-    """Run a bench script with the platform's token env var set. Returns exit code."""
+    """Run a bench script, injecting the stack token under `token_env`.
+
+    When `token_env` is None the script self-resolves its credentials (multi-API
+    surfaces read stack-prefixed vars from the platform .env); nothing is injected.
+    Returns the script's exit code."""
     cmd = [sys.executable, str(script), *(extra_args or [])]
-    env = {**os.environ, token_env: token}
+    env = {**os.environ}
+    if token_env:
+        env[token_env] = token
     print(f"  [{label}] → {' '.join(cmd)}")
     proc = subprocess.run(cmd, env=env)
     if proc.returncode != 0:
@@ -152,14 +158,15 @@ def phase_reset(args: argparse.Namespace, platform: Platform, stack: Stack) -> N
     if args.dry_run:
         print(f"  [DRY RUN] would reset {stack.name} workspace")
         return
-    rc = run_with_token(
-        platform.reset_script, token_for(stack),
-        platform.downstream_token_env, f"{stack.name} reset",
-        ["--allow-missing-state", "--stack", stack.name],
-    )
-    if rc != 0:
-        print("ERROR: reset phase failed — aborting", file=sys.stderr)
-        sys.exit(3)
+    for surface in platform.setup_surfaces:
+        rc = run_with_token(
+            surface.reset_script, token_for(stack),
+            surface.token_env, f"{stack.name} reset [{surface.name}]",
+            ["--allow-missing-state", "--stack", stack.name],
+        )
+        if rc != 0:
+            print(f"ERROR: reset phase failed for {surface.name} — aborting", file=sys.stderr)
+            sys.exit(3)
 
 
 def phase_seed(args: argparse.Namespace, platform: Platform, stack: Stack) -> None:
@@ -167,14 +174,15 @@ def phase_seed(args: argparse.Namespace, platform: Platform, stack: Stack) -> No
     if args.dry_run:
         print(f"  [DRY RUN] would full-seed {stack.name} workspace")
         return
-    rc = run_with_token(
-        platform.seed_script, token_for(stack),
-        platform.downstream_token_env, f"{stack.name} seed",
-        ["--stack", stack.name],
-    )
-    if rc != 0:
-        print("ERROR: seed phase failed — aborting", file=sys.stderr)
-        sys.exit(4)
+    for surface in platform.setup_surfaces:
+        rc = run_with_token(
+            surface.seed_script, token_for(stack),
+            surface.token_env, f"{stack.name} seed [{surface.name}]",
+            ["--stack", stack.name],
+        )
+        if rc != 0:
+            print(f"ERROR: seed phase failed for {surface.name} — aborting", file=sys.stderr)
+            sys.exit(4)
 
 
 def phase_benchmark(args: argparse.Namespace, platform: Platform,

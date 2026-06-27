@@ -57,13 +57,17 @@ Full report: [experiments/notion/README.md](experiments/notion/README.md)
 
 Full report: [experiments/gmail/README.md](experiments/gmail/README.md)
 
-## What gets measured
+### Multi-API — 23 prompts (Slack · Gmail · Notion)
 
-- Pass rate (per prompt, scored by an analyzer Claude session)
-- Total input/output tokens
-- Tool-call count
-- Wall-clock time
-- Failure modes (categorized)
+One prompt, multiple systems: each task chains dependent steps across Slack, Gmail, and Notion. The baseline stitches three official MCP servers into one session; Hintas serves all three from a single MCP server.
+
+| Metric         | Multi-API MCP - Baseline | Multi-API MCP - Hintas | Δ (Hintas − Baseline) |
+| :------------- | -----------------------: | ---------------------: | --------------------: |
+| Success rate   |                      70% |                    87% |             +17.4 pp  |
+| Speed          |                  112.9 s |                140.9 s |              +28.0 s  |
+| Tokens         |                   86,692 |                114,484 |              +27,792  |
+
+Full report: [experiments/multi_api/README.md](experiments/multi_api/README.md)
 
 ## Quick start
 

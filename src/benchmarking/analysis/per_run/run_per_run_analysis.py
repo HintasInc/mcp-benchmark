@@ -33,6 +33,7 @@ from pathlib import Path
 from statistics import mean
 
 from benchmarking.analysis import precompute as precompute_mod
+from benchmarking.analysis.categories import resolve_categories
 from benchmarking.analysis.per_run import render_md
 from benchmarking.config import (
     Platform, Stack, available_platforms, preload_platform,
@@ -43,7 +44,6 @@ from benchmarking.paths import ANALYSIS_DIR, REPO_ROOT
 PER_PROMPT_DIRNAME      = "per_prompt_analysis"
 PENDING_DATA_FILENAME   = "analysis_data_pending.json"
 DIFFICULTIES = ["L1", "L2", "L3", "L4", "L5"]
-CATEGORIES   = ["retrieval", "search", "write", "workflow", "orchestration", "edge_case"]
 
 
 # Appended verbatim to every rendered prompt. Tells the agent to write one
@@ -82,7 +82,7 @@ Earlier sections told you to read ``analysis_data.json`` and write a single
   "difficulty": "<difficulty>",
   "category": "<category>",
   "{{STACK}}": {
-    "verdict": "PASS|PARTIAL|FAIL|ERROR",
+    "verdict": "{{VERDICT_ENUM}}",
     "reasoning": "1-2 sentence grounded explanation",
     "noteworthy_paths": ["...", "..."],
     "tool_calls":      {"complete": N, "failed": N, "partial": N},
@@ -242,11 +242,13 @@ def render_prompt(template: str, platform: Platform, stack: Stack,
             .replace("{{STACK}}",                  stack.name)
             .replace("{{STACK_DISPLAY_NAME}}",     stack.display_name)
             .replace("{{PLATFORM_NOTES}}",         platform_notes))
+    verdict_enum = "PASS|FAIL|ERROR" if platform.analysis.binary else "PASS|PARTIAL|FAIL|ERROR"
     override = (PER_PROMPT_OVERRIDE
                 .replace("{{RUN_DIR}}",          str(run_dir.resolve()))
                 .replace("{{PER_PROMPT_DIR}}",   PER_PROMPT_DIRNAME)
                 .replace("{{PENDING_FILENAME}}", PENDING_DATA_FILENAME)
                 .replace("{{STACK}}",            stack.name)
+                .replace("{{VERDICT_ENUM}}",     verdict_enum)
                 .replace("{{IDS_HINT}}",         ", ".join(pending)))
     return body + override
 
@@ -379,20 +381,23 @@ def _breakdowns(per_prompt: dict, stack: str) -> dict:
                 "error":        verdicts.get("ERROR", 0),
             }
         return out
+    categories = resolve_categories(r.get("category") for r in per_prompt.values())
     return {
         "by_difficulty": by("difficulty", DIFFICULTIES),
-        "by_category":   by("category",   CATEGORIES),
+        "by_category":   by("category",   categories),
     }
 
 
-def render_md_for(run_dir: Path, verbose: bool = False) -> None:
+def render_md_for(run_dir: Path, platform: Platform, verbose: bool = False) -> None:
     """Always (re)render analysis.md so it tracks the latest analysis.json."""
     md_path = run_dir / "analysis.md"
     if md_path.exists():
         md_path.unlink()
     mode = "verbose" if verbose else "summarized"
     print(f"  rendering analysis.md from analysis.json ({mode})")
-    md = render_md.render(run_dir, verbose=verbose)
+    md = render_md.render(run_dir, verbose=verbose,
+                          binary=platform.analysis.binary,
+                          is_multi_api=(platform.name == "multi_api"))
     md_path.write_text(md)
 
 
@@ -433,7 +438,7 @@ def grade_one(run_dir: Path, platform: Platform, stack: Stack, template: str,
         if skip_claude:
             return True
         json_path = aggregate_analysis_json(run_dir, stack)
-        render_md_for(run_dir, verbose=verbose)
+        render_md_for(run_dir, platform, verbose=verbose)
         print(f"  ✓ {json_path}")
         return True
 
@@ -460,7 +465,7 @@ def grade_one(run_dir: Path, platform: Platform, stack: Stack, template: str,
           f"({sorted(newly_done, key=lambda s: (len(s), s))})")
 
     json_path = aggregate_analysis_json(run_dir, stack)
-    render_md_for(run_dir, verbose=verbose)
+    render_md_for(run_dir, platform, verbose=verbose)
 
     still_pending = [i for i in targeted if i not in after]
     if still_pending:
