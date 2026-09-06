@@ -5,13 +5,13 @@ description = "Hintas MCP vs official platform MCP head-to-head benchmark (Slack
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.14.7"
 dependencies = [
-    "google-api-python-client>=2.196.0",
-    "google-auth>=2.52.0",
-    "google-auth-oauthlib>=1.4.0",
+    "google-api-python-client>=2.200.0",
+    "google-auth>=2.57.1",
+    "google-auth-oauthlib>=1.4.1",
     "python-dotenv>=1.2.2",
-    "requests>=2.33.1",
+    "requests>=2.34.2",
     "tomli>=2.4.1",
 ]
 
